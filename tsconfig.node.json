@@ -4,6 +4,8 @@
     "electron.vite.config.ts",
     "vitest.config.ts",
     "drizzle.config.ts",
+    "playwright.config.ts",
+    "e2e/**/*",
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*"

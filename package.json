@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:e2e": "electron-vite build && playwright test",
     "check:native": "node scripts/check-native.mjs",
     "db:generate": "drizzle-kit generate"
   },
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.0",
