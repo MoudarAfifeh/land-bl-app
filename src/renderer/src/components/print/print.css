@@ -1,0 +1,121 @@
+/* Print view of templates/land-bl.xlsx. Everything is sized in mm/pt so the page looks the same
+   on screen and on paper, and text fitted on screen stays fitted when printed. */
+
+/* Same paper and margins as the Excel template (A4 portrait, 0.4" top/bottom, 0.3" sides). */
+@page {
+  size: A4 portrait;
+  margin: 10.16mm 7.62mm;
+}
+
+.ps-sheet {
+  --ps-thin: 0.2mm;
+  --ps-thick: 0.6mm;
+  --ps-line: #000;
+
+  display: grid;
+  box-sizing: border-box;
+  margin-inline: auto;
+  /* Columns run A → G left to right, as on the printed sheet; text inside is RTL. */
+  direction: ltr;
+  overflow: hidden;
+  border-top: var(--ps-thin) solid var(--ps-line);
+  border-left: var(--ps-thin) solid var(--ps-line);
+  background: #fff;
+  color: #000;
+  /* Arial ships with Windows and covers Arabic; Plex is the bundled fallback. */
+  font-family: Arial, 'IBM Plex Sans Arabic', sans-serif;
+  font-weight: 700;
+  line-height: 1.15;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.ps-cell {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: var(--ps-thin) solid var(--ps-line);
+  border-bottom: var(--ps-thin) solid var(--ps-line);
+}
+
+.ps-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline: 0.8mm;
+  direction: rtl;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.ps-text[dir='ltr'] {
+  direction: ltr;
+}
+
+.ps-align-start .ps-text {
+  text-align: start;
+}
+.ps-align-center .ps-text {
+  text-align: center;
+}
+.ps-align-left .ps-text {
+  text-align: left;
+}
+.ps-align-right .ps-text {
+  text-align: right;
+}
+/* Values are centred, as in the template. */
+.ps-value .ps-text {
+  text-align: center;
+}
+
+.ps-fill-gray {
+  background: #d0cece;
+}
+.ps-fill-blue {
+  background: #dae3f3;
+  color: #333;
+  font-weight: 400;
+}
+
+.ps-bottom-thick {
+  border-bottom-width: var(--ps-thick);
+}
+.ps-right-thick {
+  border-right-width: var(--ps-thick);
+}
+.ps-right-none {
+  border-right-color: transparent;
+}
+
+.ps-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 1mm;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+/* "Assigned on save" placeholder in the review step; never part of a real print. */
+.ps-pending .ps-text {
+  color: #888;
+  font-weight: 400;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+}
+
+/* The /print/:id page: the sheet alone, with the page margins shown on screen. */
+@media screen {
+  .print-page {
+    padding-block: 10.16mm;
+  }
+}
