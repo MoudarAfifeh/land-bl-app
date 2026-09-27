@@ -1,0 +1,14 @@
+# Phase 0: only what's needed to ship templates. NSIS/installer config comes in Phase 7.
+appId: com.landbl.app
+productName: Land BL
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: templates/
+    to: templates/
+    filter:
+      - '**/*'
