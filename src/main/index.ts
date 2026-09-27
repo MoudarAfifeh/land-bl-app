@@ -31,7 +31,20 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+// One instance only: a second copy would open the same SQLite file and userData folder.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  })
+  app.whenReady().then(start)
+}
+
+function start(): void {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) =>
     callback(false)
   )
@@ -48,7 +61,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
 app.on('will-quit', () => closeDb())
 
