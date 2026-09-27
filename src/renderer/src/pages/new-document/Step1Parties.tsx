@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { AddVesselDialog } from './AddVesselDialog'
+import { VesselDialog } from '@/components/vessels/VesselDialog'
 import { DateField, LookupField, StoredValueCheckbox, TextField } from './controls'
 import { fieldId, type FormValues } from './form'
 import { useStoredConflict, type WizardData } from './hooks'
@@ -141,11 +141,11 @@ export function Step1Parties({ data, onVesselCreated }: Step1Props): React.JSX.E
       <PartyFields role="shipper" parties={data.parties} />
       <PartyFields role="consignee" parties={data.parties} />
 
-      <AddVesselDialog
+      <VesselDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultMakeActive={data.activeVessel === null}
-        onCreated={onVesselCreated}
+        onSaved={onVesselCreated}
       />
     </div>
   )

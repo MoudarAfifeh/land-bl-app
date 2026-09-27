@@ -119,7 +119,7 @@ export const prefixBlockedMessage = (letter: string): string =>
  * The vessel schema for a form or a save: `currentPrefix` is the vessel's stored letter when
  * editing (kept even if blocked), null for a new vessel.
  */
-export function vesselSchemaFor(currentPrefix: string | null): z.ZodType<VesselInput, unknown> {
+export function vesselSchemaFor(currentPrefix: string | null): typeof vesselInputSchema {
   return vesselInputSchema.superRefine((v, ctx) => {
     if (v.prefix !== currentPrefix && BLOCKED_PREFIXES.includes(v.prefix))
       ctx.addIssue({ code: 'custom', path: ['prefix'], message: prefixBlockedMessage(v.prefix) })

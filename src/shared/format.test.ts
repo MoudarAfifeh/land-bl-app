@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { displayToIso, isoToDisplay, parseNumber, toLatinDigits, todayIso } from './format'
+import {
+  displayToIso,
+  formatDateTime,
+  isoToDisplay,
+  parseNumber,
+  toLatinDigits,
+  todayIso
+} from './format'
 
 describe('dates', () => {
   it('shows ISO dates as DD/MM/YYYY', () => {
@@ -44,5 +51,12 @@ describe('numbers', () => {
     expect(parseNumber('36,000')).toBeNaN()
     expect(parseNumber('1e3')).toBeNaN()
     expect(parseNumber('abc')).toBeNaN()
+  })
+})
+
+describe('formatDateTime', () => {
+  it('shows a timestamp in local time as DD/MM/YYYY HH:mm', () => {
+    expect(formatDateTime(new Date(2026, 8, 7, 9, 5).toISOString())).toBe('07/09/2026 09:05')
+    expect(formatDateTime('nope')).toBe('nope')
   })
 })

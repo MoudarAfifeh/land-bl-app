@@ -1,5 +1,47 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import type { BackupStatus } from '@shared/api'
+import { errorMessages } from '@shared/errors'
+import { BackupAgeNotice } from '@/components/BackupAgeNotice'
+import { Notice } from '@/components/Notice'
 import { Button } from '@/components/ui/button'
+
+const backupSettings = '/settings?tab=backup'
+
+/** Staff rarely open Settings, so a missing, old or failed backup is announced here too. */
+function BackupBanner(): React.JSX.Element | null {
+  const [status, setStatus] = useState<BackupStatus | null>(null)
+
+  useEffect(() => {
+    // Not being able to read the status must not break the home page.
+    window.api.backup.status().then(setStatus, () => undefined)
+  }, [])
+
+  if (!status) return null
+  if (status.age !== 'ok')
+    return (
+      <BackupAgeNotice
+        status={status}
+        action={
+          <div>
+            <Button asChild size="sm" variant="destructive">
+              <Link to={backupSettings}>النسخ الاحتياطي</Link>
+            </Button>
+          </div>
+        }
+      />
+    )
+  if (status.lastError)
+    return (
+      <Notice tone="warning" data-testid="backup-last-error">
+        فشلت آخر محاولة نسخ احتياطي: {errorMessages[status.lastError.code]}{' '}
+        <Link to={backupSettings} className="underline">
+          الإعدادات
+        </Link>
+      </Notice>
+    )
+  return null
+}
 
 function HomePage(): React.JSX.Element {
   return (
@@ -19,6 +61,7 @@ function HomePage(): React.JSX.Element {
           <Link to="/settings">الإعدادات</Link>
         </Button>
       </div>
+      <BackupBanner />
     </main>
   )
 }

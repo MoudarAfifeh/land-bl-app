@@ -24,6 +24,13 @@ export function isoToDisplay(value: string | null | undefined): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : (value ?? '')
 }
 
+/** A moment (ISO timestamp) in local time: DD/MM/YYYY HH:mm. */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${isoToDisplay(todayIso(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /** D/M/YYYY (with /, - or . as separator) → ISO, or null if it isn't a real date. */
 export function displayToIso(text: string): string | null {
   const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(toLatinDigits(text).trim())
