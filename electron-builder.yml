@@ -7,8 +7,15 @@ directories:
 files:
   - out/**
   - package.json
+# better-sqlite3 ships N-API prebuilds (ABI-stable across Node and Electron), so nothing needs
+# rebuilding; a node-gyp rebuild would also require Python + MSVC. Verify with `npm run check:native`.
+npmRebuild: false
 extraResources:
   - from: templates/
     to: templates/
+    filter:
+      - '**/*'
+  - from: src/main/db/migrations/
+    to: migrations/
     filter:
       - '**/*'

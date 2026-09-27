@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest'
+import { getTableColumns } from 'drizzle-orm'
+import { documentFields, type FieldType } from '@shared/fields'
+import { documents, settings } from './schema'
+import { openTestDb } from './test-db'
+
+const snake = (key: string): string => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
+
+const columnTypeFor: Record<FieldType, string> = {
+  string: 'SQLiteText',
+  date: 'SQLiteText',
+  number: 'SQLiteReal',
+  ref: 'SQLiteInteger',
+  boolean: 'SQLiteBoolean',
+  stringList: 'SQLiteTextJson'
+}
+
+describe('documents table matches fields.ts', () => {
+  const columns = getTableColumns(documents)
+
+  for (const f of documentFields) {
+    it(`${f.key} → ${snake(f.key)}`, () => {
+      const col = columns[f.key as keyof typeof columns]
+      expect(col, f.key).toBeDefined()
+      expect(col.name).toBe(snake(f.key))
+      expect(col.columnType).toBe(columnTypeFor[f.type])
+      // Required inputs are NOT NULL; the auto serial is NOT NULL too.
+      if (f.required || f.key === 'serialNo') expect(col.notNull).toBe(true)
+    })
+  }
+})
+
+describe('openDb', () => {
+  it('runs migrations and seeds the customs agent defaults', () => {
+    const db = openTestDb()
+    const rows = db.select().from(settings).all()
+    expect(rows.map((r) => r.key).sort()).toEqual(['customsAgent1', 'customsAgent2'])
+    expect(rows.find((r) => r.key === 'customsAgent2')?.value).toContain('معبر الوليد')
+  })
+})

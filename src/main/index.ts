@@ -1,6 +1,7 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, dialog, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { closeDb, initDb } from './db'
 import { registerIpc } from './ipc'
 
 function createWindow(): void {
@@ -34,6 +35,13 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) =>
     callback(false)
   )
+  try {
+    initDb()
+  } catch (error) {
+    dialog.showErrorBox('تعذّر فتح قاعدة البيانات', String(error))
+    app.exit(1)
+    return
+  }
   registerIpc()
   createWindow()
 
@@ -41,6 +49,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+app.on('will-quit', () => closeDb())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
