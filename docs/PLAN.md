@@ -55,6 +55,9 @@ Prompt:
 > and `export-word.ts` (docxtemplater on templates/land-bl.docx). Tests: generate both from a sample
 > document and assert key cells / text. Let the user choose the save location. Plan first.
 
+Done in Phase 4: ExcelJS could not load the template and rounded fractional font sizes, so Excel
+is filled by editing the sheet XML with pizzip (see CLAUDE.md, Stack).
+
 Done when: both files open in Office with all values in place. For Excel check the logo, merged cells and
 one-page print survived. If ExcelJS drops the logo or print settings, stop and tell me before switching library.
 

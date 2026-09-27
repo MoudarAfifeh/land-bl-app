@@ -24,8 +24,15 @@ Follow `docs/PLAN.md` phase by phase.
 - DB: better-sqlite3 + Drizzle ORM (migrations in `src/main/db/migrations`, generated with
   `npm run db:generate`, applied automatically on app start, shipped as extraResources).
   better-sqlite3 uses N-API prebuilds: no node-gyp rebuild for Electron. Check with `npm run check:native`.
-- Excel: ExcelJS (fill `templates/land-bl.xlsx`)
-- Word: docxtemplater + pizzip (fill `templates/land-bl.docx`, `linebreaks: true`)
+- Excel: pizzip, editing `xl/worksheets/sheet1.xml` of `templates/land-bl.xlsx` directly
+  (`services/export-excel.ts`). Not ExcelJS: it can't load this template (unprefixed drawing XML)
+  and rounds 9.5 / 7.1 pt fonts. Text and dates are inline strings, numbers `<v>`, each cell keeps
+  its `s` style. A test checks every other zip part stays byte-identical to the template.
+- Word: docxtemplater + pizzip (fill `templates/land-bl.docx`, `linebreaks: true`, empty for missing).
+  Every tag sits in an RTL run, so a line not starting with an Arabic letter is wrapped in LRM marks
+  (`wordText` in `services/export-data.ts`, the Word equivalent of the print view's `dir="auto"`).
+- Export values come from `exportSlots()` in `fields.ts` (printed fields, seal1..seal12, both agents).
+  `npm test` writes sample exports to `test-output/` and prints their paths for a check in Office.
 - Print / PDF: hidden BrowserWindow rendering the print view, `webContents.print()` / `printToPDF()`.
   The print view's layout is data in `src/renderer/src/components/print/print-layout.ts` (spans only,
   no cell addresses; a test checks positions against `fields.ts`).
@@ -40,7 +47,9 @@ Follow `docs/PLAN.md` phase by phase.
 src/
   main/        Electron main: DB, file system, exports, printing, IPC handlers
     db/        schema.ts, migrations/, client.ts
-    services/  serial.ts, documents.ts, vessels.ts, settings.ts, lookups.ts, export-excel.ts, export-word.ts, backup.ts
+    services/  serial.ts, documents.ts, vessels.ts, settings.ts, lookups.ts, print.ts, backup.ts,
+               export.ts (build), export-data.ts, export-excel.ts, export-word.ts,
+               export-dialog.ts + save-file.ts (Electron: save dialog, write)
     ipc.ts     one handler per service method
   preload/     contextBridge exposing a typed `window.api`
   renderer/    React UI only. No Node, no fs, no DB access.
