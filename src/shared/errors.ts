@@ -3,6 +3,8 @@ export const errorMessages = {
   VESSEL_NOT_FOUND: 'الباخرة غير موجودة',
   VESSEL_INACTIVE: 'الباخرة غير نشطة ولا يمكن إصدار وثائق جديدة لها',
   PREFIX_LOCKED: 'لا يمكن تغيير حرف البوليصة بعد إصدار وثائق لهذه الباخرة',
+  LOOKUP_NOT_FOUND: 'العنصر غير موجود، ربما حُذف',
+  LOOKUP_DUPLICATE: 'هذا الاسم موجود مسبقًا في القائمة',
   DOCUMENT_NOT_FOUND: 'الوثيقة غير موجودة',
   DOCUMENT_DELETED: 'الوثيقة محذوفة ولا يمكن طباعتها أو تصديرها',
   INVALID_DATA: 'البيانات غير صالحة، يرجى مراجعة الحقول',

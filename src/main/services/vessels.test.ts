@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Db } from '../db/client'
 import { openTestDb } from '../db/test-db'
 import { ServiceError } from '@shared/errors'
-import { createDocument, getDocument } from './documents'
+import { ZodError } from 'zod'
+import { vessels } from '../db/schema'
+import { createDocument, getDocument, softDeleteDocument } from './documents'
 import {
   createVessel,
   getActiveVessel,
   listVessels,
+  listVesselsWithCounts,
   setActiveVessel,
   updateVessel
 } from './vessels'
@@ -73,5 +76,59 @@ describe('vessels', () => {
     expect(doc.serialNo).toBe('A00001')
     expect(doc.seals).toEqual(['S1', 'S2'])
     expect(doc.vessel).toMatchObject({ id: a.id, prefix: 'A', isActive: false })
+  })
+})
+
+describe('vessel list for settings', () => {
+  it('counts documents, deleted ones too, and locks the letter once there is one', () => {
+    const a = createVessel(db, input, { makeActive: true })
+    const b = createVessel(db, { ...input, name: 'MT B', prefix: 'B', isActive: false })
+    const doc = createDocument(db, sampleDocument(a.id))
+    createDocument(db, sampleDocument(a.id))
+    softDeleteDocument(db, doc.id)
+
+    expect(listVesselsWithCounts(db)).toEqual([
+      {
+        id: a.id,
+        name: 'MT Test',
+        prefix: 'A',
+        arrivalDate: '2026-09-20',
+        isActive: true,
+        isCurrent: true,
+        documentCount: 2,
+        lastSerial: 'A00002'
+      },
+      {
+        id: b.id,
+        name: 'MT B',
+        prefix: 'B',
+        arrivalDate: '2026-09-20',
+        isActive: false,
+        isCurrent: false,
+        documentCount: 0,
+        lastSerial: null
+      }
+    ])
+  })
+})
+
+describe('blocked letters', () => {
+  it('refuses O and I for a new vessel', () => {
+    expect(() => createVessel(db, { ...input, prefix: 'o' })).toThrow(ZodError)
+    expect(() => createVessel(db, { ...input, prefix: 'I' })).toThrow(ZodError)
+    expect(listVessels(db)).toEqual([])
+  })
+
+  it('refuses changing a letter to O or I', () => {
+    const a = createVessel(db, input)
+    expect(() => updateVessel(db, a.id, { prefix: 'O' })).toThrow(ZodError)
+    expect(listVessels(db)[0].prefix).toBe('A')
+  })
+
+  it('leaves a vessel that already has one untouched and editable', () => {
+    const old = db.insert(vessels).values({ name: 'MT Old', prefix: 'O' }).returning().get()
+    createDocument(db, sampleDocument(old.id))
+    const renamed = updateVessel(db, old.id, { name: 'MT Old 2', isActive: false })
+    expect(renamed).toMatchObject({ name: 'MT Old 2', prefix: 'O', isActive: false })
   })
 })

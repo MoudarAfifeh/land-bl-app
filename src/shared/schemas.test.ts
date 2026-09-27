@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { documentInputSchema, messages, vesselInputSchema } from './schemas'
+import {
+  BLOCKED_PREFIXES,
+  documentInputSchema,
+  messages,
+  partyInputSchema,
+  prefixBlockedMessage,
+  vesselInputSchema,
+  vesselSchemaFor
+} from './schemas'
 
 const valid = {
   vesselId: 1,
@@ -91,5 +99,39 @@ describe('vesselInputSchema', () => {
       })
       expect(r.success, prefix).toBe(false)
     }
+  })
+})
+
+describe('vesselSchemaFor', () => {
+  const vessel = { name: 'MT Test', prefix: 'o', arrivalDate: null, isActive: true }
+
+  it('refuses O and I for a new vessel, in any case', () => {
+    expect(BLOCKED_PREFIXES).toEqual(['O', 'I'])
+    for (const prefix of ['o', 'O', 'i', 'I']) {
+      const result = vesselSchemaFor(null).safeParse({ ...vessel, prefix })
+      expect(result.success, prefix).toBe(false)
+      expect(result.error?.issues[0]).toMatchObject({
+        path: ['prefix'],
+        message: prefixBlockedMessage(prefix.toUpperCase())
+      })
+    }
+    expect(vesselSchemaFor(null).parse({ ...vessel, prefix: 'q' }).prefix).toBe('Q')
+  })
+
+  it('lets a vessel keep a blocked letter it already has, but not change to one', () => {
+    expect(vesselSchemaFor('O').parse(vessel).prefix).toBe('O')
+    expect(vesselSchemaFor('A').safeParse({ ...vessel, prefix: 'I' }).success).toBe(false)
+  })
+})
+
+describe('lookup inputs', () => {
+  it('requires a name and turns a blank address into null', () => {
+    expect(partyInputSchema.parse({ name: ' شركة ', address: '  ' })).toEqual({
+      name: 'شركة',
+      address: null
+    })
+    expect(partyInputSchema.safeParse({ name: '  ', address: null }).error?.issues[0].message).toBe(
+      messages.required
+    )
   })
 })

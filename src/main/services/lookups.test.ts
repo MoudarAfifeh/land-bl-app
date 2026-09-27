@@ -2,8 +2,26 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Db } from '../db/client'
 import { counters, documents } from '../db/schema'
 import { openTestDb } from '../db/test-db'
-import { createDocument } from './documents'
-import { listDrivers, listParties, listTankers, saveDriver, saveParty, saveTanker } from './lookups'
+import { ServiceError } from '@shared/errors'
+import { ZodError } from 'zod'
+import { createDocument, getDocumentView } from './documents'
+import {
+  createDriver,
+  createParty,
+  createTanker,
+  deleteDriver,
+  deleteParty,
+  deleteTanker,
+  listDrivers,
+  listParties,
+  listTankers,
+  saveDriver,
+  saveParty,
+  saveTanker,
+  updateDriver,
+  updateParty,
+  updateTanker
+} from './lookups'
 import { createVessel } from './vessels'
 import { sampleDocument } from './test-fixtures'
 
@@ -167,5 +185,92 @@ describe('saving a document fills the lookups', () => {
     expect(db.select().from(documents).all()).toEqual([])
     expect(db.select().from(counters).all()).toEqual([])
     expect(listParties(db)).toEqual([])
+  })
+})
+
+/** The ServiceError code thrown by `run`. */
+function codeOf(run: () => unknown): string | undefined {
+  try {
+    run()
+  } catch (e) {
+    return e instanceof ServiceError ? e.code : String(e)
+  }
+  return undefined
+}
+
+describe('editing lookups in settings', () => {
+  it('adds a party with its name normalised and a blank address as null', () => {
+    const p = createParty(db, { name: '  شركة   النور ', address: ' ' })
+    expect(p).toEqual({ id: p.id, name: 'شركة النور', address: null })
+    expect(listParties(db)).toEqual([p])
+  })
+
+  it('refuses an exact duplicate, ignoring case and spaces', () => {
+    createParty(db, { name: 'Al Noor Co', address: null })
+    expect(codeOf(() => createParty(db, { name: ' al  noor CO', address: 'x' }))).toBe(
+      'LOOKUP_DUPLICATE'
+    )
+    createDriver(db, { name: 'أحمد', passportNo: null })
+    expect(codeOf(() => createDriver(db, { name: 'أحمد ', passportNo: 'P' }))).toBe(
+      'LOOKUP_DUPLICATE'
+    )
+    createTanker(db, { tankerNo: 'T-1' })
+    expect(codeOf(() => createTanker(db, { tankerNo: 't-1' }))).toBe('LOOKUP_DUPLICATE')
+  })
+
+  it('allows a spelling variant (the UI only warns about it)', () => {
+    createDriver(db, { name: 'أحمد', passportNo: null })
+    createDriver(db, { name: 'احمد', passportNo: null })
+    expect(listDrivers(db)).toHaveLength(2)
+  })
+
+  it('edits an entry, and refuses renaming it onto another one', () => {
+    const a = createParty(db, { name: 'المرسل', address: 'دمشق' })
+    createParty(db, { name: 'المستلم', address: null })
+    expect(updateParty(db, a.id, { name: 'المرسل الجديد', address: 'حلب' })).toEqual({
+      id: a.id,
+      name: 'المرسل الجديد',
+      address: 'حلب'
+    })
+    expect(codeOf(() => updateParty(db, a.id, { name: 'المستلم', address: null }))).toBe(
+      'LOOKUP_DUPLICATE'
+    )
+    // Changing only the case of its own name is fine.
+    const t = createTanker(db, { tankerNo: 'abc' })
+    expect(updateTanker(db, t.id, { tankerNo: 'ABC' }).tankerNo).toBe('ABC')
+    const d = createDriver(db, { name: 'سائق', passportNo: 'P1' })
+    expect(updateDriver(db, d.id, { name: 'سائق', passportNo: '' }).passportNo).toBeNull()
+  })
+
+  it('validates input and reports missing entries', () => {
+    expect(() => createTanker(db, { tankerNo: '  ' })).toThrow(ZodError)
+    expect(codeOf(() => updateParty(db, 99, { name: 'x', address: null }))).toBe('LOOKUP_NOT_FOUND')
+    expect(codeOf(() => deleteDriver(db, 99))).toBe('LOOKUP_NOT_FOUND')
+  })
+
+  it('deletes entries without changing saved documents', () => {
+    const doc = createDocument(
+      db,
+      sampleDocument(vesselId, {
+        shipperName: 'المرسل',
+        shipperAddress: 'دمشق',
+        driverName: 'سائق',
+        passportNo: 'P1',
+        tankerNo: 'T-9'
+      })
+    )
+    const before = getDocumentView(db, doc.id)
+    updateParty(db, listParties(db).find((p) => p.name === 'المرسل')!.id, {
+      name: 'اسم آخر',
+      address: 'حلب'
+    })
+    for (const p of listParties(db)) deleteParty(db, p.id)
+    for (const d of listDrivers(db)) deleteDriver(db, d.id)
+    for (const t of listTankers(db)) deleteTanker(db, t.id)
+
+    expect(listParties(db)).toEqual([])
+    expect(listDrivers(db)).toEqual([])
+    expect(listTankers(db)).toEqual([])
+    expect(getDocumentView(db, doc.id)).toEqual(before)
   })
 })

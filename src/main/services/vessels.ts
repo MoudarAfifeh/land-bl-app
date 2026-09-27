@@ -1,6 +1,7 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, sql } from 'drizzle-orm'
+import type { VesselListRow } from '@shared/api'
 import { ServiceError } from '@shared/errors'
-import { vesselInputSchema, type VesselInput } from '@shared/schemas'
+import { vesselSchemaFor, type VesselInput } from '@shared/schemas'
 import type { Db } from '../db/client'
 import { documents, vessels, type Vessel } from '../db/schema'
 import { getSetting, setSetting } from './settings'
@@ -10,7 +11,7 @@ export function createVessel(
   input: VesselInput,
   { makeActive = false }: { makeActive?: boolean } = {}
 ): Vessel {
-  const data = vesselInputSchema.parse(input)
+  const data = vesselSchemaFor(null).parse(input)
   return db.transaction((tx) => {
     const vessel = tx.insert(vessels).values(data).returning().get()
     if (makeActive) {
@@ -29,6 +30,30 @@ export function listVessels(
   return (activeOnly ? query.where(eq(vessels.isActive, true)) : query)
     .orderBy(asc(vessels.id))
     .all()
+}
+
+/**
+ * Every vessel for the settings screen, oldest first, with its document count (deleted documents
+ * included: their numbers stay taken) and the last serial issued for it.
+ */
+export function listVesselsWithCounts(db: Db): VesselListRow[] {
+  const current = getActiveVessel(db)?.id ?? null
+  return db
+    .select({
+      id: vessels.id,
+      name: vessels.name,
+      prefix: vessels.prefix,
+      arrivalDate: vessels.arrivalDate,
+      isActive: vessels.isActive,
+      documentCount: sql<number>`(SELECT count(*) FROM documents d WHERE d.vessel_id = vessels.id)`,
+      lastSerial: sql<
+        string | null
+      >`(SELECT d.serial_no FROM documents d WHERE d.vessel_id = vessels.id ORDER BY d.number DESC LIMIT 1)`
+    })
+    .from(vessels)
+    .orderBy(asc(vessels.id))
+    .all()
+    .map((v) => ({ ...v, isCurrent: v.id === current }))
 }
 
 /** The default vessel for new documents, or null if none is set or it was deactivated. */
@@ -55,7 +80,7 @@ export function updateVessel(db: Db, id: number, patch: Partial<VesselInput>): V
     const current = tx.select().from(vessels).where(eq(vessels.id, id)).get()
     if (!current) throw new ServiceError('VESSEL_NOT_FOUND')
 
-    const data = vesselInputSchema.parse({ ...current, ...patch })
+    const data = vesselSchemaFor(current.prefix).parse({ ...current, ...patch })
     if (data.prefix !== current.prefix) {
       const hasDocuments = tx
         .select({ id: documents.id })

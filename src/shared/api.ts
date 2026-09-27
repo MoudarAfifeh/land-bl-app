@@ -14,6 +14,16 @@ export interface VesselSummary {
   isActive: boolean
 }
 
+/** A vessel in the settings list. Its letter is locked once `documentCount` > 0. */
+export interface VesselListRow extends VesselSummary {
+  /** The default vessel for new documents. */
+  isCurrent: boolean
+  /** Deleted documents included: their numbers stay taken. */
+  documentCount: number
+  /** Serial of the highest number issued, or null. */
+  lastSerial: string | null
+}
+
 export interface CreateDocumentOptions {
   /** Replace the stored address of an existing shipper / consignee with the document's. */
   updateShipperAddress?: boolean

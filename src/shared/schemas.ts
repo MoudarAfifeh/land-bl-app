@@ -93,6 +93,9 @@ export const documentInputSchema = z.object(shapeOf(documentInputFields))
 export type Settings = ValuesOf<(typeof settingFields)[number]>
 export const settingsSchema = z.object(shapeOf(settingFields))
 
+/** The two agent blocks as edited in Settings; blank means none. */
+export const customsAgentsSchema = settingsSchema.pick({ customsAgent1: true, customsAgent2: true })
+
 export type VesselInput = ValuesOf<(typeof vesselFields)[number]>
 export const vesselInputSchema = z.object({
   ...shapeOf(vesselFields),
@@ -102,6 +105,38 @@ export const vesselInputSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]$/, messages.prefix)
 })
+
+/**
+ * Letters refused when a vessel's letter is set or changed: printed, they read as 0 and 1.
+ * Vessels that already have one keep it. Awaiting the client's confirmation; change only here.
+ */
+export const BLOCKED_PREFIXES: readonly string[] = ['O', 'I']
+
+export const prefixBlockedMessage = (letter: string): string =>
+  `لا يُستخدم الحرف ${letter} لأنه يشبه رقمًا في الوثيقة المطبوعة`
+
+/**
+ * The vessel schema for a form or a save: `currentPrefix` is the vessel's stored letter when
+ * editing (kept even if blocked), null for a new vessel.
+ */
+export function vesselSchemaFor(currentPrefix: string | null): z.ZodType<VesselInput, unknown> {
+  return vesselInputSchema.superRefine((v, ctx) => {
+    if (v.prefix !== currentPrefix && BLOCKED_PREFIXES.includes(v.prefix))
+      ctx.addIssue({ code: 'custom', path: ['prefix'], message: prefixBlockedMessage(v.prefix) })
+  })
+}
+
+const requiredText = z.string({ error: messages.required }).trim().min(1, messages.required)
+const optionalText = z.preprocess(blankToNull, z.string().trim().nullable())
+
+/** Lookup entries edited in Settings. Names are stored normalised (shared/lookups.ts). */
+export const partyInputSchema = z.object({ name: requiredText, address: optionalText })
+export const driverInputSchema = z.object({ name: requiredText, passportNo: optionalText })
+export const tankerInputSchema = z.object({ tankerNo: requiredText })
+
+export type PartyInput = z.output<typeof partyInputSchema>
+export type DriverInput = z.output<typeof driverInputSchema>
+export type TankerInput = z.output<typeof tankerInputSchema>
 
 export const HISTORY_PAGE_SIZE = 50
 

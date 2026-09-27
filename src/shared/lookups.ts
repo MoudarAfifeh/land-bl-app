@@ -2,6 +2,7 @@
  * Matching rules for lookup lists (parties, drivers, tankers), shared by main (saving) and the
  * renderer (autocomplete, "update stored value" checkboxes) so both sides agree.
  */
+import { normalizeSearch } from './search'
 
 export interface Party {
   id: number
@@ -72,4 +73,40 @@ export function nextStoredValue(
   if (doc === null) return undefined
   if (blankToNull(storedValue) === null) return doc
   return replace && differsFromStored(doc, storedValue) ? doc : undefined
+}
+
+/**
+ * Entries whose name is the same once Arabic spelling variants are folded (أحمد = احمد,
+ * شركة = شركه, ١٢٣ = 123) but that are not an exact duplicate: the user is warned, not blocked.
+ * `exceptId` leaves out the entry being edited.
+ */
+export function findSimilar<T extends { id: number }>(
+  items: readonly T[],
+  nameOf: (item: T) => string,
+  name: string,
+  exceptId: number | null = null
+): T[] {
+  const folded = normalizeSearch(name)
+  const key = nameKey(name)
+  if (folded === '') return []
+  return items.filter(
+    (item) =>
+      item.id !== exceptId &&
+      normalizeSearch(nameOf(item)) === folded &&
+      nameKey(nameOf(item)) !== key
+  )
+}
+
+/** The entry that would be an exact duplicate of `name` (ignoring case and spaces), if any. */
+export function findDuplicate<T extends { id: number }>(
+  items: readonly T[],
+  nameOf: (item: T) => string,
+  name: string,
+  exceptId: number | null = null
+): T | undefined {
+  return findByName(
+    items.filter((item) => item.id !== exceptId),
+    nameOf,
+    name
+  )
 }
