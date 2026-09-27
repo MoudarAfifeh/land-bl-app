@@ -13,5 +13,10 @@ export const app = {
   getAppPath: opened
 }
 export const BrowserWindow = opened
-export const dialog = { showSaveDialog: opened, showMessageBoxSync: opened }
+export const dialog = {
+  showSaveDialog: opened,
+  showOpenDialog: opened,
+  showMessageBoxSync: opened,
+  showErrorBox: opened
+}
 export const ipcMain = { handle: opened }

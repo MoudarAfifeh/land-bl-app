@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { apiMethods } from '@shared/api'
+import { apiMethods, type BackupStatus } from '@shared/api'
 import { errorMessageAr } from '@shared/errors'
 import type { Db } from './db/client'
 import { openTestDb } from './db/test-db'
@@ -7,15 +7,26 @@ import { createHandlers, toResult, toResultAsync, type Handlers } from './handle
 import { updateVessel } from './services/vessels'
 import { sampleDocument } from './services/test-fixtures'
 
+const backupStatus: BackupStatus = {
+  folder: 'D:\\LandBL-Backups',
+  lastBackupAt: null,
+  lastBackupPath: null,
+  lastError: null,
+  age: 'none',
+  sameDriveAsData: false
+}
+
 let db: Db
 let handlers: Handlers
 let printed: number[]
 let exported: string[]
+let restored: string[]
 
 beforeEach(() => {
   db = openTestDb()
   printed = []
   exported = []
+  restored = []
   handlers = createHandlers(db, {
     print: {
       print: async (id) => {
@@ -32,6 +43,15 @@ beforeEach(() => {
       word: async (id) => {
         exported.push(`word ${id}`)
         return null
+      }
+    },
+    backup: {
+      status: async () => backupStatus,
+      chooseFolder: async () => null,
+      runNow: async () => backupStatus,
+      pickRestoreFile: async () => null,
+      restore: async (file) => {
+        restored.push(file)
       }
     }
   })
@@ -157,5 +177,61 @@ describe('toResult', () => {
       ok: false,
       code: 'INVALID_DATA'
     })
+  })
+})
+
+describe('settings handlers', () => {
+  it('edits vessels and sets the current one', () => {
+    const a = handlers.vessels.create(
+      { name: 'MT A', prefix: 'A', arrivalDate: null, isActive: true },
+      { makeActive: false }
+    )
+    handlers.documents.create(sampleDocument(a.id), {})
+    handlers.vessels.setActive(a.id)
+    expect(handlers.vessels.update(a.id, { ...a, name: 'MT A2' }).name).toBe('MT A2')
+    expect(handlers.vessels.listWithCounts()).toMatchObject([
+      { id: a.id, name: 'MT A2', documentCount: 1, isCurrent: true, lastSerial: 'A00001' }
+    ])
+    expect(toResult(() => handlers.vessels.update(a.id, { ...a, prefix: 'B' }))).toEqual({
+      ok: false,
+      code: 'PREFIX_LOCKED'
+    })
+    expect(toResult(() => handlers.vessels.setActive(0))).toEqual({
+      ok: false,
+      code: 'INVALID_DATA'
+    })
+  })
+
+  it('edits lookups and reports duplicates as a code', () => {
+    const p = handlers.lookups.createParty({ name: 'شركة', address: null })
+    expect(toResult(() => handlers.lookups.createParty({ name: ' شركة ', address: null }))).toEqual(
+      { ok: false, code: 'LOOKUP_DUPLICATE' }
+    )
+    handlers.lookups.updateParty(p.id, { name: 'شركة 2', address: 'دمشق' })
+    handlers.lookups.deleteParty(p.id)
+    expect(handlers.lookups.listParties()).toEqual([])
+    const t = handlers.lookups.createTanker({ tankerNo: 'T1' })
+    expect(handlers.lookups.updateTanker(t.id, { tankerNo: 'T2' }).tankerNo).toBe('T2')
+    const d = handlers.lookups.createDriver({ name: 'سائق', passportNo: 'P' })
+    handlers.lookups.deleteDriver(d.id)
+    expect(toResult(() => handlers.lookups.deleteDriver(d.id))).toEqual({
+      ok: false,
+      code: 'LOOKUP_NOT_FOUND'
+    })
+  })
+
+  it('saves the customs agents', () => {
+    handlers.settings.setCustomsAgents({ customsAgent1: 'أ', customsAgent2: 'ب' })
+    expect(handlers.settings.getCustomsAgents()).toEqual({ customsAgent1: 'أ', customsAgent2: 'ب' })
+  })
+
+  it('passes backups to the backup service and checks the restore file', async () => {
+    await expect(handlers.backup.status()).resolves.toEqual(backupStatus)
+    await handlers.backup.restore('D:\b.sqlite')
+    expect(await toResultAsync(() => handlers.backup.restore(''))).toEqual({
+      ok: false,
+      code: 'INVALID_DATA'
+    })
+    expect(restored).toEqual(['D:\b.sqlite'])
   })
 })

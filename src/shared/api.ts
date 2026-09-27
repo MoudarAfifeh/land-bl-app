@@ -4,7 +4,15 @@
  */
 import type { ErrorCode } from './errors'
 import type { Driver, Party, Tanker } from './lookups'
-import type { DocumentInput, DocumentListQuery, Settings, VesselInput } from './schemas'
+import type {
+  DocumentInput,
+  DocumentListQuery,
+  DriverInput,
+  PartyInput,
+  Settings,
+  TankerInput,
+  VesselInput
+} from './schemas'
 
 export interface VesselSummary {
   id: number
@@ -113,11 +121,27 @@ export interface Api {
     /** The default vessel for new documents, or null. */
     getActive(): Promise<VesselSummary | null>
     create(input: VesselInput, options: { makeActive: boolean }): Promise<VesselSummary>
+    /** Settings list: document counts, current vessel. */
+    listWithCounts(): Promise<VesselListRow[]>
+    /** Name, arrival date, active; the letter only while the vessel has no documents. */
+    update(id: number, input: VesselInput): Promise<VesselSummary>
+    /** Makes an active vessel the default for new documents. */
+    setActive(id: number): Promise<void>
   }
   lookups: {
     listParties(): Promise<Party[]>
     listDrivers(): Promise<Driver[]>
     listTankers(): Promise<Tanker[]>
+    /** Settings. LOOKUP_DUPLICATE for an exact duplicate; saved documents never change. */
+    createParty(input: PartyInput): Promise<Party>
+    updateParty(id: number, input: PartyInput): Promise<Party>
+    deleteParty(id: number): Promise<void>
+    createDriver(input: DriverInput): Promise<Driver>
+    updateDriver(id: number, input: DriverInput): Promise<Driver>
+    deleteDriver(id: number): Promise<void>
+    createTanker(input: TankerInput): Promise<Tanker>
+    updateTanker(id: number, input: TankerInput): Promise<Tanker>
+    deleteTanker(id: number): Promise<void>
   }
   documents: {
     create(
@@ -133,6 +157,8 @@ export interface Api {
   }
   settings: {
     getCustomsAgents(): Promise<CustomsAgents>
+    /** Applies to documents saved afterwards; saved ones keep their copy. */
+    setCustomsAgents(input: CustomsAgents): Promise<CustomsAgents>
   }
   print: {
     /** Opens the system print dialog; `printed` is false if the user cancelled. */
@@ -146,18 +172,51 @@ export interface Api {
     /** Same for the Word template. */
     word(id: number): Promise<{ path: string } | null>
   }
+  backup: {
+    status(): Promise<BackupStatus>
+    /** Asks for a folder; null if the user cancelled. */
+    chooseFolder(): Promise<BackupStatus | null>
+    /** Backs up now into the chosen folder. */
+    runNow(): Promise<BackupStatus>
+    /** Asks for a backup file and checks it; null if the user cancelled. */
+    pickRestoreFile(): Promise<RestorePreview | null>
+    /** Checks the file again, writes a safety backup, restores and restarts the app. */
+    restore(file: string): Promise<void>
+  }
 }
 
 export type ApiGroup = keyof Api
 
 /** Every method of the API, used by preload and main to build channels. */
 export const apiMethods = {
-  vessels: ['listActive', 'listAll', 'getActive', 'create'],
-  lookups: ['listParties', 'listDrivers', 'listTankers'],
+  vessels: [
+    'listActive',
+    'listAll',
+    'getActive',
+    'create',
+    'listWithCounts',
+    'update',
+    'setActive'
+  ],
+  lookups: [
+    'listParties',
+    'listDrivers',
+    'listTankers',
+    'createParty',
+    'updateParty',
+    'deleteParty',
+    'createDriver',
+    'updateDriver',
+    'deleteDriver',
+    'createTanker',
+    'updateTanker',
+    'deleteTanker'
+  ],
   documents: ['create', 'get', 'list', 'softDelete'],
-  settings: ['getCustomsAgents'],
+  settings: ['getCustomsAgents', 'setCustomsAgents'],
   print: ['print', 'savePdf'],
-  export: ['excel', 'word']
+  export: ['excel', 'word'],
+  backup: ['status', 'chooseFolder', 'runNow', 'pickRestoreFile', 'restore']
 } as const satisfies { [G in ApiGroup]: readonly (keyof Api[G])[] }
 
 export function channelOf(group: string, method: string): string {

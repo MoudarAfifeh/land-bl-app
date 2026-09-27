@@ -1,7 +1,7 @@
 /**
  * One handler per `window.api` method. Kept free of Electron so tests can call it directly;
- * ipc.ts registers each one on its channel. Printing and exporting need Electron (windows and
- * dialogs), so those services are passed in.
+ * ipc.ts registers each one on its channel. Printing, exporting and backups need Electron (windows,
+ * dialogs, restarting the app), so those services are passed in.
  */
 import { z, ZodError } from 'zod'
 import type { Api, IpcResult } from '@shared/api'
@@ -13,12 +13,19 @@ import {
   listDocuments,
   softDeleteDocument
 } from './services/documents'
-import { listDrivers, listParties, listTankers } from './services/lookups'
-import { getCustomsAgents } from './services/settings'
-import { createVessel, getActiveVessel, listVessels } from './services/vessels'
+import * as lookups from './services/lookups'
+import { getCustomsAgents, setCustomsAgents } from './services/settings'
+import {
+  createVessel,
+  getActiveVessel,
+  listVessels,
+  listVesselsWithCounts,
+  setActiveVessel,
+  updateVessel
+} from './services/vessels'
 
 /** Groups whose handlers are asynchronous (they drive Electron windows and dialogs). */
-export type AsyncGroup = 'print' | 'export'
+export type AsyncGroup = 'print' | 'export' | 'backup'
 
 /** Same signatures as the Api, but synchronous: better-sqlite3 doesn't need promises. */
 type Sync<T> = {
@@ -29,7 +36,8 @@ export type Handlers = { [G in Exclude<keyof Api, AsyncGroup>]: Sync<Api[G]> } &
   [G in AsyncGroup]: Api[G]
 }
 
-const documentId = z.number().int().positive()
+/** A row id from the renderer: documents, vessels, lookup entries. */
+const rowId = z.number().int().positive()
 
 export function createHandlers(db: Db, services: Pick<Api, AsyncGroup>): Handlers {
   return {
@@ -37,32 +45,52 @@ export function createHandlers(db: Db, services: Pick<Api, AsyncGroup>): Handler
       listActive: () => listVessels(db, { activeOnly: true }),
       listAll: () => listVessels(db),
       getActive: () => getActiveVessel(db),
-      create: (input, { makeActive }) => createVessel(db, input, { makeActive })
+      create: (input, { makeActive }) => createVessel(db, input, { makeActive }),
+      listWithCounts: () => listVesselsWithCounts(db),
+      update: (id, input) => updateVessel(db, rowId.parse(id), input),
+      setActive: (id) => setActiveVessel(db, rowId.parse(id))
     },
     lookups: {
-      listParties: () => listParties(db),
-      listDrivers: () => listDrivers(db),
-      listTankers: () => listTankers(db)
+      listParties: () => lookups.listParties(db),
+      listDrivers: () => lookups.listDrivers(db),
+      listTankers: () => lookups.listTankers(db),
+      createParty: (input) => lookups.createParty(db, input),
+      updateParty: (id, input) => lookups.updateParty(db, rowId.parse(id), input),
+      deleteParty: (id) => lookups.deleteParty(db, rowId.parse(id)),
+      createDriver: (input) => lookups.createDriver(db, input),
+      updateDriver: (id, input) => lookups.updateDriver(db, rowId.parse(id), input),
+      deleteDriver: (id) => lookups.deleteDriver(db, rowId.parse(id)),
+      createTanker: (input) => lookups.createTanker(db, input),
+      updateTanker: (id, input) => lookups.updateTanker(db, rowId.parse(id), input),
+      deleteTanker: (id) => lookups.deleteTanker(db, rowId.parse(id))
     },
     documents: {
       create: (input, options) => {
         const { id, serialNo } = createDocument(db, input, options)
         return { id, serialNo }
       },
-      get: (id) => getDocumentView(db, documentId.parse(id)),
+      get: (id) => getDocumentView(db, rowId.parse(id)),
       list: (query) => listDocuments(db, query),
-      softDelete: (id) => softDeleteDocument(db, documentId.parse(id))
+      softDelete: (id) => softDeleteDocument(db, rowId.parse(id))
     },
     settings: {
-      getCustomsAgents: () => getCustomsAgents(db)
+      getCustomsAgents: () => getCustomsAgents(db),
+      setCustomsAgents: (input) => setCustomsAgents(db, input)
     },
     print: {
-      print: (id) => services.print.print(documentId.parse(id)),
-      savePdf: (id) => services.print.savePdf(documentId.parse(id))
+      print: (id) => services.print.print(rowId.parse(id)),
+      savePdf: (id) => services.print.savePdf(rowId.parse(id))
     },
     export: {
-      excel: (id) => services.export.excel(documentId.parse(id)),
-      word: (id) => services.export.word(documentId.parse(id))
+      excel: (id) => services.export.excel(rowId.parse(id)),
+      word: (id) => services.export.word(rowId.parse(id))
+    },
+    backup: {
+      status: () => services.backup.status(),
+      chooseFolder: () => services.backup.chooseFolder(),
+      runNow: () => services.backup.runNow(),
+      pickRestoreFile: () => services.backup.pickRestoreFile(),
+      restore: (file) => services.backup.restore(z.string().min(1).parse(file))
     }
   }
 }

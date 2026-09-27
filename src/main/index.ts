@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, session } from 'electron'
 import { closeDb, initDb } from './db'
 import { registerIpc } from './ipc'
+import { createBackupService, type BackupService } from './services/backup-service'
 import { createExportService } from './services/export-dialog'
 import { createPrintService } from './services/print'
 import { loadRenderer, lockNavigation, secureWebPreferences } from './windows'
@@ -58,11 +59,14 @@ function start(): void {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) =>
     callback(false)
   )
+  let backup: BackupService
   try {
     const db = initDb()
+    backup = createBackupService(db, () => mainWindow)
     registerIpc(db, {
       print: createPrintService(db, () => mainWindow),
-      export: createExportService(db, () => mainWindow)
+      export: createExportService(db, () => mainWindow),
+      backup
     })
   } catch (error) {
     dialog.showErrorBox('تعذّر فتح قاعدة البيانات', String(error))
@@ -70,6 +74,7 @@ function start(): void {
     return
   }
   createWindow()
+  backup.startSchedule()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
