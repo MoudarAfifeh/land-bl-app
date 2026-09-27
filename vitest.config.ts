@@ -10,6 +10,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
-    environment: 'node'
+    environment: 'node',
+    globalSetup: ['vitest.global-setup.ts']
   }
 })
