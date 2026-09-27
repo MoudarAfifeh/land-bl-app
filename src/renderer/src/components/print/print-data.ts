@@ -4,7 +4,7 @@
  */
 import { documentFields, MAX_SEALS } from '@shared/fields'
 import type { CustomsAgents } from '@shared/api'
-import { formatNumber, isoToDisplay } from '@/lib/format'
+import { displayValue } from '@shared/format'
 import type { AgentKey, ValueFieldKey } from './print-layout'
 
 export interface PrintData {
@@ -24,16 +24,9 @@ const valueFields = documentFields.filter(
     f.print && f.type !== 'stringList'
 )
 
-function display(type: string, v: string | number | null | undefined): string {
-  if (v === null || v === undefined) return ''
-  if (type === 'date') return isoToDisplay(String(v))
-  if (type === 'number') return typeof v === 'number' ? formatNumber(v) : String(v).trim()
-  return String(v).trim()
-}
-
 export function toPrintData(source: PrintSource, agents: CustomsAgents): PrintData {
   const values = Object.fromEntries(
-    valueFields.map((f) => [f.key, display(f.type, source[f.key])])
+    valueFields.map((f) => [f.key, displayValue(f.type, source[f.key])])
   ) as Record<ValueFieldKey, string>
   const filled = source.seals.map((s) => s.trim()).filter(Boolean)
   const seals = Array.from({ length: MAX_SEALS }, (_, i) => filled[i] ?? '')

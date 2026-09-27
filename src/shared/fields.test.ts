@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest'
 import {
   documentFields,
   documentInputFields,
+  exportSlots,
   settingFields,
   stepFieldKeys,
   MAX_SEALS,
+  SEAL_KEYS,
   WIZARD_STEPS
 } from './fields'
 
@@ -47,6 +49,33 @@ describe('fields', () => {
       expect(f.step, f.key).toBeDefined()
       if (f.print) expect(f.excel, f.key).not.toBeNull()
     }
+  })
+})
+
+describe('export slots', () => {
+  const slots = exportSlots()
+
+  it('covers every printed field, the 12 seals and both agents, each in its own cell', () => {
+    const printed = documentFields.filter((f) => f.print && f.key !== 'seals').map((f) => f.key)
+    expect(slots.map((s) => s.key).sort()).toEqual(
+      [...printed, ...SEAL_KEYS, 'customsAgent1', 'customsAgent2'].sort()
+    )
+    expect(new Set(slots.map((s) => s.cell)).size).toBe(slots.length)
+    expect(new Set(slots.map((s) => s.cell))).toEqual(new Set(allExportedCells))
+  })
+
+  it('puts seal1..seal12 in the seal cells, in order', () => {
+    const seals = documentFields.find((f) => f.key === 'seals')!
+    expect(slots.filter((s) => s.key.startsWith('seal')).map((s) => s.cell)).toEqual(seals.excel)
+    expect(SEAL_KEYS[0]).toBe('seal1')
+    expect(SEAL_KEYS[11]).toBe('seal12')
+  })
+
+  it('keeps the field type for numbers and dates', () => {
+    const typeOf = (key: string): string | undefined => slots.find((s) => s.key === key)?.type
+    expect(typeOf('qtyNaturalL')).toBe('number')
+    expect(typeOf('issueDate')).toBe('date')
+    expect(typeOf('customsAgent1')).toBe('string')
   })
 })
 

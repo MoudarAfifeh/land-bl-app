@@ -456,6 +456,37 @@ export const MAX_SEALS = 12
 
 export const WIZARD_STEPS = [1, 2, 3, 4] as const satisfies readonly WizardStep[]
 
+/** Word placeholders of the seals, in template order: seal1 … seal12. */
+export const SEAL_KEYS = Array.from({ length: MAX_SEALS }, (_, i) => `seal${i + 1}`)
+
+/**
+ * One value in the Excel and Word templates: a printed field, one seal, or a customs agent block.
+ * `key` is also the Word placeholder `{key}`; `cell` is the top-left cell of its merge.
+ */
+export interface ExportSlot {
+  key: string
+  cell: string
+  type: 'string' | 'number' | 'date'
+}
+
+/** Every value slot of the templates, in field order. */
+export function exportSlots(): ExportSlot[] {
+  const slots: ExportSlot[] = []
+  for (const f of [...documentFields, ...settingFields] as readonly FieldDef[]) {
+    if (!f.print || f.excel === null) continue
+    if (typeof f.excel === 'string') {
+      slots.push({
+        key: f.key,
+        cell: f.excel,
+        type: f.type === 'number' || f.type === 'date' ? f.type : 'string'
+      })
+    } else {
+      f.excel.forEach((cell, i) => slots.push({ key: SEAL_KEYS[i], cell, type: 'string' }))
+    }
+  }
+  return slots
+}
+
 /** Keys the user fills in on a wizard step, in form order. */
 export function stepFieldKeys(step: WizardStep): DocumentInputField['key'][] {
   return documentInputFields.filter((f) => f.step === step).map((f) => f.key)
