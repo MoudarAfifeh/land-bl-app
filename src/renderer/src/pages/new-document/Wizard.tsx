@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
 import { Link } from 'react-router'
 import { CheckCircle2, ChevronLeft, ChevronRight, Save } from 'lucide-react'
-import type { VesselSummary } from '@shared/api'
+import type { DocumentView, VesselSummary } from '@shared/api'
 import { errorMessageAr } from '@shared/errors'
 import { stepFieldKeys, type WizardStep } from '@shared/fields'
 import type { DocumentInput } from '@shared/schemas'
 import { Button } from '@/components/ui/button'
 import { todayIso } from '@/lib/format'
-import { buildDefaults, formResolver, stepOfField, type FormValues } from './form'
+import { buildDefaults, duplicateValues, formResolver, stepOfField, type FormValues } from './form'
 import { useFollowCopies, type WizardData } from './hooks'
 import { LeaveGuard } from './LeaveGuard'
 import { PrintActions } from '@/components/print/PrintActions'
@@ -20,23 +20,25 @@ import { Step4Transport } from './Step4Transport'
 import { StepIndicator } from './StepIndicator'
 import { allSteps, focusableFields, REVIEW_STEP, stepTitles, type Step } from './steps'
 
-function defaultsFor(data: WizardData): FormValues {
-  return buildDefaults({
-    today: todayIso(),
-    settings: { activeVesselId: data.activeVessel?.id ?? null }
-  })
+function defaultsFor(data: WizardData, source?: DocumentView): FormValues {
+  const context = { today: todayIso(), settings: { activeVesselId: data.activeVessel?.id ?? null } }
+  return source ? duplicateValues(source, context) : buildDefaults(context)
 }
 
 interface WizardProps {
   data: WizardData
   reload: () => Promise<WizardData>
+  /** "Duplicate as new": the saved document to start from. */
+  source?: DocumentView
+  /** After saving, "وثيقة جديدة" starts a blank document (drops the duplicate's source). */
+  onStartNew?: () => void
 }
 
 /** One form across all steps, so values survive moving back and forth. */
-export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
+export function Wizard({ data, reload, source, onStartNew }: WizardProps): React.JSX.Element {
   const form = useForm<FormValues, unknown, DocumentInput>({
     resolver: formResolver,
-    defaultValues: defaultsFor(data),
+    defaultValues: defaultsFor(data, source),
     mode: 'onTouched'
   })
   const resetCopies = useFollowCopies(form)
@@ -130,6 +132,7 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
   }
 
   function startNewDocument(): void {
+    onStartNew?.()
     form.reset(defaultsFor(data))
     resetCopies()
     setSaveError(null)

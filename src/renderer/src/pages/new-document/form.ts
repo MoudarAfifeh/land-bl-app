@@ -6,7 +6,7 @@
 import { z } from 'zod'
 import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { CreateDocumentOptions } from '@shared/api'
+import type { CreateDocumentOptions, DocumentView } from '@shared/api'
 import { documentInputFields, type DocumentInputField, type WizardStep } from '@shared/fields'
 import { documentInputSchema, type DocumentInput } from '@shared/schemas'
 
@@ -51,6 +51,36 @@ export function buildDefaults({ today, settings }: DefaultsContext): FormValues 
   // Copies run last so they see the defaults they copy from.
   for (const f of documentInputFields) {
     if ('default' in f && 'copyOf' in f.default) values[f.key] = values[f.default.copyOf]
+  }
+  return values as FormValues
+}
+
+/**
+ * "Duplicate as new" starts from the defaults of a new document (issue date today, transport date
+ * following it, the active vessel) and copies every other field, the supply order date included:
+ * several tankers usually share one supply order. Tanker, driver, passport and seals belong to
+ * one trip and are left empty. The serial is assigned on save as always.
+ */
+export const DUPLICATE_CLEARED = [
+  'issueDate',
+  'transportDate',
+  'tankerNo',
+  'driverName',
+  'passportNo',
+  'seals'
+] as const satisfies readonly FieldKey[]
+
+export function duplicateValues(source: DocumentView, context: DefaultsContext): FormValues {
+  const values: Record<string, unknown> = { ...buildDefaults(context) }
+  const cleared: readonly string[] = DUPLICATE_CLEARED
+  for (const f of documentInputFields) {
+    if (f.type === 'ref' || cleared.includes(f.key)) continue
+    const v = source[f.key]
+    if (f.type === 'number') values[f.key] = v ?? null
+    else if (f.type === 'stringList') {
+      const items = (v as string[]).map((value) => ({ value }))
+      values[f.key] = items.length ? items : [{ value: '' }]
+    } else values[f.key] = v ?? ''
   }
   return values as FormValues
 }
