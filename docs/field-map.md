@@ -12,7 +12,8 @@ Word template: `templates/land-bl.docx` (docxtemplater, default `{}` delimiters,
 
 | key | Label (AR / EN) | Type | Excel | Source |
 |---|---|---|---|---|
-| serialNo | رقم البوليصة / Serial No | string, e.g. `A00001` | C3 | Auto, assigned on save |
+| serialNo | رقم البوليصة / Serial No | string, e.g. `A00001` | C3 | Auto on save: vessel letter + number per vessel |
+| vesselId | الباخرة / Vessel | ref, required | — (not printed) | Lookup: vessels. Default: active vessel |
 | issueDate | تاريخ الإصدار / Date of Issue | date | C4 | Default: today, editable |
 | shipperName | الجهة المرسلة / Shipper | string, required | C5 | Lookup: parties |
 | shipperAddress | العنوان / Address | string | C6 | Auto-filled from party |
@@ -28,7 +29,7 @@ Word template: `templates/land-bl.docx` (docxtemplater, default `{}` delimiters,
 | qtyStandardL | قياسي (ليتر) / Standard (Liter) | number | A12 |
 | weightKg | الوزن (كغ) / Weight (KG) | number | A13 |
 | barrels | برميل / Barrel | number | A14 |
-| seal1 … seal12 | الأختام / Seals Numbers | string[] (max 12) | see below |
+| seals | الأختام / Seals Numbers | string[] (max 12), exported as `seal1 … seal12` | see below |
 
 Seal cells, in order: `A15, C15, E15, A16, C16, E16, A17, C17, E17, A18, C18, E18`.
 In the DB store seals as a JSON array; expand to `seal1..seal12` only when exporting.
@@ -66,12 +67,27 @@ Quantity formulas are NOT confirmed yet. Do not auto-calculate until the client 
 
 | key | Meaning | Excel | Word |
 |---|---|---|---|
-| serialPrefix | Serial letter, default `A` | — | — |
+| activeVesselId | Default vessel for new documents (must be an active vessel) | — | — |
 | customsAgent1 | Syrian agent block (multi-line) | A27 | {customsAgent1} |
 | customsAgent2 | Iraqi agent block (multi-line) | A30 | {customsAgent2} |
 
 The Excel template already contains the current agent text. Overwrite A27/A30 from settings on export
 so a settings change is reflected in new documents.
+
+## Vessels (الباخرة)
+
+The serial prefix belongs to the vessel, not to the app. Each vessel numbers its documents from 00001.
+
+| key | Label (AR / EN) | Type |
+|---|---|---|
+| name | اسم الباخرة / Vessel name | string, required |
+| prefix | حرف البوليصة / Serial letter | one Latin letter A–Z, required; locked once the vessel has documents |
+| arrivalDate | تاريخ الوصول / Arrival date | date |
+| isActive | نشطة / Active | boolean, default true |
+
+- Uniqueness is (vessel, number). Two vessels may share a letter (not confirmed, see CLAUDE.md).
+- Inactive vessels get no new documents; their existing documents still open, print and export.
+- "Duplicate as new" uses the active vessel, not the original document's vessel.
 
 ## Out of scope for now
 

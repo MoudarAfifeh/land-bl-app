@@ -21,7 +21,9 @@ Follow `docs/PLAN.md` phase by phase.
 
 - Electron + electron-vite, React 18, TypeScript (strict)
 - UI: Tailwind + shadcn/ui, RTL. Forms: react-hook-form + Zod
-- DB: better-sqlite3 + Drizzle ORM (migrations in `src/main/db/migrations`)
+- DB: better-sqlite3 + Drizzle ORM (migrations in `src/main/db/migrations`, generated with
+  `npm run db:generate`, applied automatically on app start, shipped as extraResources).
+  better-sqlite3 uses N-API prebuilds: no node-gyp rebuild for Electron. Check with `npm run check:native`.
 - Excel: ExcelJS (fill `templates/land-bl.xlsx`)
 - Word: docxtemplater + pizzip (fill `templates/land-bl.docx`, `linebreaks: true`)
 - Print / PDF: hidden BrowserWindow rendering the print view, `webContents.print()` / `printToPDF()`
@@ -33,7 +35,7 @@ Follow `docs/PLAN.md` phase by phase.
 src/
   main/        Electron main: DB, file system, exports, printing, IPC handlers
     db/        schema.ts, migrations/, client.ts
-    services/  serial.ts, documents.ts, lookups.ts, export-excel.ts, export-word.ts, backup.ts
+    services/  serial.ts, documents.ts, vessels.ts, settings.ts, lookups.ts, export-excel.ts, export-word.ts, backup.ts
     ipc.ts     one handler per service method
   preload/     contextBridge exposing a typed `window.api`
   renderer/    React UI only. No Node, no fs, no DB access.
@@ -50,10 +52,18 @@ Rules:
 
 ## Serial number
 
-- Format: `${prefix}${number padded to 5}` → `A00001`. Prefix comes from settings.
+- The prefix is the **vessel's letter** (الباخرة), not a global setting. Each vessel has its own
+  counter starting at 1. Format: `${vessel.prefix}${number padded to 5}` → `A00001`.
+- Uniqueness is `(vessel_id, number)`, not the serial string: two vessels may share a letter.
+  `serial_no` is stored as issued and never recomputed.
 - Generated ONLY in `services/serial.ts`, inside the same SQLite transaction that inserts the document.
 - Assigned on final save, not when the form opens, so abandoned forms never burn a number.
 - Never reuse or renumber. Deleting is soft delete (`deleted_at`), the number stays taken.
+- A vessel's letter is locked once it has documents.
+- New documents default to the active vessel (`settings.activeVesselId`); the user can pick another
+  active vessel in wizard step 1. `vesselId` is stored but not printed or exported.
+- Inactive vessels can't receive new documents, but their existing documents still open, print,
+  export and re-export normally. "Duplicate as new" uses the current active vessel, not the original.
 
 ## Domain glossary
 
@@ -65,6 +75,7 @@ Rules:
 | طبيعي / قياسي | Natural vs standard (temperature-corrected) liters |
 | معامل تصحيح الحجم (VCF) | Volume correction factor |
 | الكثافة القياسية 15@ | Density at 15°C |
+| الباخرة / Vessel | The ship whose cargo is moved; its letter prefixes the serial |
 | الأختام | Seal numbers placed on the tanker, up to 12 |
 | الصهريج | Tanker truck |
 | رقم تسهيل المهمة | Mission facilitation number |
@@ -80,6 +91,8 @@ npm run typecheck
 npm run lint
 npm test           # vitest
 npm run test:e2e   # playwright electron smoke test
+npm run db:generate   # new migration after editing src/main/db/schema.ts
+npm run check:native  # load better-sqlite3 inside Electron
 npm run build:win  # NSIS installer
 ```
 
@@ -97,3 +110,5 @@ npm run build:win  # NSIS installer
 - Formulas linking natural/standard liters, weight and barrels. Until confirmed, all quantities are manual input.
 - Date format confirmed? Default `DD/MM/YYYY`.
 - Multi-device serial strategy (later): shared LAN DB vs prefix per device.
+- Letter reuse across vessels: the schema allows two vessels with the same letter (serials would
+  repeat, e.g. two `A00001`). Not confirmed by the client; don't add a uniqueness rule or warning yet.
