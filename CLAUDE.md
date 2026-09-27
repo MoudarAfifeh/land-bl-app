@@ -21,6 +21,11 @@ Follow `docs/PLAN.md` phase by phase.
 
 - Electron + electron-vite, React 18, TypeScript (strict)
 - UI: Tailwind + shadcn/ui, RTL. Forms: react-hook-form + Zod
+- shadcn registry components target React 19; this app is React 18. When adding one: wrap any
+  component that receives a `ref` in `forwardRef` (React 18 drops `ref` props silently; Input and
+  Button already are), and import `cn` from `@/lib/utils`, not the `cn` package the registry adds.
+- Dates: `DateInput` (DD/MM/YYYY text + calendar). Calendar text uses `ar-SY-u-nu-latn`
+  (`lib/calendar-format.ts`): Levantine month names, Latin digits. Plain `ar-SY` writes ٢٠٢٦.
 - DB: better-sqlite3 + Drizzle ORM (migrations in `src/main/db/migrations`, generated with
   `npm run db:generate`, applied automatically on app start, shipped as extraResources).
   better-sqlite3 uses N-API prebuilds: no node-gyp rebuild for Electron. Check with `npm run check:native`.
