@@ -1,0 +1,20 @@
+import { eq, sql } from 'drizzle-orm'
+import type { SettingKey } from '@shared/fields'
+import type { Settings } from '@shared/schemas'
+import type { Db, Tx } from '../db/client'
+import { settings } from '../db/schema'
+
+export function getSetting<K extends SettingKey>(db: Db | Tx, key: K): Settings[K] | null {
+  const row = db.select().from(settings).where(eq(settings.key, key)).get()
+  return (row?.value ?? null) as Settings[K] | null
+}
+
+export function setSetting<K extends SettingKey>(db: Db | Tx, key: K, value: Settings[K]): void {
+  db.insert(settings)
+    .values({ key, value })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value, updatedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` }
+    })
+    .run()
+}
