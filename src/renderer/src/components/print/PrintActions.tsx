@@ -1,29 +1,50 @@
 import { useRef, useState } from 'react'
-import { FileDown, Printer } from 'lucide-react'
+import { FileDown, FileSpreadsheet, FileText, Printer } from 'lucide-react'
 import { errorMessageAr } from '@shared/errors'
 import { Button } from '@/components/ui/button'
 
 type Status = { kind: 'saved'; path: string } | { kind: 'error'; text: string } | null
+type Action = 'print' | 'pdf' | 'excel' | 'word'
 
-/** "طباعة" and "حفظ PDF" for a saved document. Cancelling either shows nothing. */
+/** Runs an action; resolves with the saved file's path, or null (printed, or cancelled). */
+function perform(action: Action, id: number): Promise<{ path: string } | null> {
+  switch (action) {
+    case 'print':
+      return window.api.print.print(id).then(() => null)
+    case 'pdf':
+      return window.api.print.savePdf(id)
+    case 'excel':
+      return window.api.export.excel(id)
+    case 'word':
+      return window.api.export.word(id)
+  }
+}
+
+const buttons: { action: Action; icon: React.JSX.Element; label: string; busy: string }[] = [
+  { action: 'print', icon: <Printer />, label: 'طباعة', busy: 'جارٍ التحضير…' },
+  { action: 'pdf', icon: <FileDown />, label: 'حفظ PDF', busy: 'جارٍ الحفظ…' },
+  { action: 'excel', icon: <FileSpreadsheet />, label: 'تصدير Excel', busy: 'جارٍ التصدير…' },
+  { action: 'word', icon: <FileText />, label: 'تصدير Word', busy: 'جارٍ التصدير…' }
+]
+
+/**
+ * "طباعة", "حفظ PDF", "تصدير Excel" and "تصدير Word" for a saved document.
+ * Cancelling any of them shows nothing.
+ */
 export function PrintActions({ documentId }: { documentId: number }): React.JSX.Element {
-  const [busy, setBusy] = useState<'print' | 'pdf' | null>(null)
+  const [busy, setBusy] = useState<Action | null>(null)
   const [status, setStatus] = useState<Status>(null)
   const busyRef = useRef(false)
 
-  async function run(kind: 'print' | 'pdf'): Promise<void> {
-    // One job at a time: each opens a hidden window and a system dialog.
+  async function run(action: Action): Promise<void> {
+    // One job at a time: each opens a system dialog (and printing a hidden window).
     if (busyRef.current) return
     busyRef.current = true
-    setBusy(kind)
+    setBusy(action)
     setStatus(null)
     try {
-      if (kind === 'print') {
-        await window.api.print.print(documentId)
-      } else {
-        const saved = await window.api.print.savePdf(documentId)
-        if (saved) setStatus({ kind: 'saved', path: saved.path })
-      }
+      const saved = await perform(action, documentId)
+      if (saved) setStatus({ kind: 'saved', path: saved.path })
     } catch (e) {
       setStatus({ kind: 'error', text: errorMessageAr(e) })
     } finally {
@@ -34,15 +55,18 @@ export function PrintActions({ documentId }: { documentId: number }): React.JSX.
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="flex gap-2">
-        <Button variant="outline" disabled={busy !== null} onClick={() => void run('print')}>
-          <Printer />
-          {busy === 'print' ? 'جارٍ التحضير…' : 'طباعة'}
-        </Button>
-        <Button variant="outline" disabled={busy !== null} onClick={() => void run('pdf')}>
-          <FileDown />
-          {busy === 'pdf' ? 'جارٍ الحفظ…' : 'حفظ PDF'}
-        </Button>
+      <div className="flex flex-wrap justify-center gap-2">
+        {buttons.map((b) => (
+          <Button
+            key={b.action}
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void run(b.action)}
+          >
+            {b.icon}
+            {busy === b.action ? b.busy : b.label}
+          </Button>
+        ))}
       </div>
       {status && (
         <p
