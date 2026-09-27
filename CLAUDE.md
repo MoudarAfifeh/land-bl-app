@@ -26,7 +26,12 @@ Follow `docs/PLAN.md` phase by phase.
   better-sqlite3 uses N-API prebuilds: no node-gyp rebuild for Electron. Check with `npm run check:native`.
 - Excel: ExcelJS (fill `templates/land-bl.xlsx`)
 - Word: docxtemplater + pizzip (fill `templates/land-bl.docx`, `linebreaks: true`)
-- Print / PDF: hidden BrowserWindow rendering the print view, `webContents.print()` / `printToPDF()`
+- Print / PDF: hidden BrowserWindow rendering the print view, `webContents.print()` / `printToPDF()`.
+  The print view's layout is data in `src/renderer/src/components/print/print-layout.ts` (spans only,
+  no cell addresses; a test checks positions against `fields.ts`).
+- Document font stack: `Arial, "IBM Plex Sans Arabic", sans-serif` at the template's point sizes.
+  Arial ships with Windows and is not bundled; Plex is the bundled fallback. Use the same stack when
+  checking the Word template.
 - Tests: Vitest (unit), Playwright for Electron (smoke)
 
 ## Architecture
