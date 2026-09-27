@@ -44,7 +44,9 @@ Follow `docs/PLAN.md` phase by phase.
 - Document font stack: `Arial, "IBM Plex Sans Arabic", sans-serif` at the template's point sizes.
   Arial ships with Windows and is not bundled; Plex is the bundled fallback. Use the same stack when
   checking the Word template.
-- Tests: Vitest (unit), Playwright for Electron (smoke)
+- Tests: Vitest (unit), Playwright for Electron (smoke). In unit tests `electron` is aliased to
+  `src/main/test-electron.ts`, a stub that throws if a window or dialog is opened.
+- History search: `search_text` column (normalised by `shared/search.ts`), `LIKE … ESCAPE '!'`.
 
 ## Architecture
 
@@ -78,6 +80,10 @@ Rules:
 - Generated ONLY in `services/serial.ts`, inside the same SQLite transaction that inserts the document.
 - Assigned on final save, not when the form opens, so abandoned forms never burn a number.
 - Never reuse or renumber. Deleting is soft delete (`deleted_at`), the number stays taken.
+- Documents are never edited after save. If editing is ever added, `search_text` must be rebuilt in
+  the same transaction.
+- A deleted document opens read-only; print, PDF, Excel and Word refuse it in main with
+  `DOCUMENT_DELETED` (`getPrintableDocument`), not only in the UI.
 - A vessel's letter is locked once it has documents.
 - New documents default to the active vessel (`settings.activeVesselId`); the user can pick another
   active vessel in wizard step 1. `vesselId` is stored but not printed or exported.

@@ -67,6 +67,11 @@ Prompt:
 > Build the documents history screen: table with search by serial, driver, tanker, shipper and date range.
 > Actions: open, re-export Excel/Word, print, duplicate as new (copies everything except serial, dates,
 > tanker, driver and seals), soft delete. Duplicate uses the active vessel, not the original's.
+
+Decided in Phase 5: duplicate clears issue date (today), transport date, tanker, driver, passport and
+seals, and copies everything else, **including the supply order date** (several tankers share one supply
+order). Deleted documents open read-only with a «محذوفة» banner; main refuses to print or export them
+(DOCUMENT_DELETED), and they can't be duplicated or restored.
 > Documents of inactive vessels open, print and re-export normally.
 
 Done when: duplicate creates a new serial and old documents re-export identically, including documents
