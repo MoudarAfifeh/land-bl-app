@@ -24,6 +24,20 @@ function createWindow(): void {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', (event) => event.preventDefault())
 
+  // The renderer blocks unload while a form has unsaved changes; Electron shows no dialog by
+  // itself, so ask here and let the window close only if the user confirms.
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'warning',
+      buttons: ['الخروج دون حفظ', 'البقاء'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'تغييرات غير محفوظة',
+      message: 'لديك تغييرات غير محفوظة. هل تريد الخروج دون حفظ؟'
+    })
+    if (choice === 0) event.preventDefault()
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -49,13 +63,12 @@ function start(): void {
     callback(false)
   )
   try {
-    initDb()
+    registerIpc(initDb())
   } catch (error) {
     dialog.showErrorBox('تعذّر فتح قاعدة البيانات', String(error))
     app.exit(1)
     return
   }
-  registerIpc()
   createWindow()
 
   app.on('activate', () => {
