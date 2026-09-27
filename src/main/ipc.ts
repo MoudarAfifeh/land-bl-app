@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
 import { apiMethods, channelOf, type Api } from '@shared/api'
 import type { Db } from './db/client'
-import { createHandlers, toResultAsync } from './handlers'
+import { createHandlers, toResultAsync, type AsyncGroup } from './handlers'
 
 /** Registers one ipcMain handler per `window.api` method. */
-export function registerIpc(db: Db, services: Pick<Api, 'print'>): void {
+export function registerIpc(db: Db, services: Pick<Api, AsyncGroup>): void {
   const handlers = createHandlers(db, services) as unknown as Record<
     string,
     Record<string, (...args: unknown[]) => unknown>

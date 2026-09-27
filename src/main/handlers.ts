@@ -1,6 +1,7 @@
 /**
  * One handler per `window.api` method. Kept free of Electron so tests can call it directly;
- * ipc.ts registers each one on its channel. Printing needs Electron, so it is passed in.
+ * ipc.ts registers each one on its channel. Printing and exporting need Electron (windows and
+ * dialogs), so those services are passed in.
  */
 import { z, ZodError } from 'zod'
 import type { Api, IpcResult } from '@shared/api'
@@ -8,11 +9,11 @@ import { ServiceError, type ErrorCode } from '@shared/errors'
 import type { Db } from './db/client'
 import { createDocument, getDocumentView } from './services/documents'
 import { listDrivers, listParties, listTankers } from './services/lookups'
-import { getSetting } from './services/settings'
+import { getCustomsAgents } from './services/settings'
 import { createVessel, getActiveVessel, listVessels } from './services/vessels'
 
 /** Groups whose handlers are asynchronous (they drive Electron windows and dialogs). */
-type AsyncGroup = 'print'
+export type AsyncGroup = 'print' | 'export'
 
 /** Same signatures as the Api, but synchronous: better-sqlite3 doesn't need promises. */
 type Sync<T> = {
@@ -45,14 +46,15 @@ export function createHandlers(db: Db, services: Pick<Api, AsyncGroup>): Handler
       get: (id) => getDocumentView(db, documentId.parse(id))
     },
     settings: {
-      getCustomsAgents: () => ({
-        customsAgent1: getSetting(db, 'customsAgent1'),
-        customsAgent2: getSetting(db, 'customsAgent2')
-      })
+      getCustomsAgents: () => getCustomsAgents(db)
     },
     print: {
       print: (id) => services.print.print(documentId.parse(id)),
       savePdf: (id) => services.print.savePdf(documentId.parse(id))
+    },
+    export: {
+      excel: (id) => services.export.excel(documentId.parse(id)),
+      word: (id) => services.export.word(documentId.parse(id))
     }
   }
 }

@@ -25,6 +25,9 @@ export interface CreateDocumentOptions {
 /** A saved document as the UI reads it. `vesselId` is kept but never printed. */
 export type DocumentView = DocumentInput & { id: number; serialNo: string }
 
+/** File formats the document exports to, each filled from its template. */
+export type ExportFormat = 'excel' | 'word'
+
 /** The two customs agent blocks printed on every document, from settings. */
 export type CustomsAgents = Pick<Settings, 'customsAgent1' | 'customsAgent2'>
 
@@ -57,6 +60,12 @@ export interface Api {
     /** Asks where to save, then writes the PDF; null if the user cancelled. */
     savePdf(id: number): Promise<{ path: string } | null>
   }
+  export: {
+    /** Asks where to save, then writes the filled Excel template; null if the user cancelled. */
+    excel(id: number): Promise<{ path: string } | null>
+    /** Same for the Word template. */
+    word(id: number): Promise<{ path: string } | null>
+  }
 }
 
 export type ApiGroup = keyof Api
@@ -67,7 +76,8 @@ export const apiMethods = {
   lookups: ['listParties', 'listDrivers', 'listTankers'],
   documents: ['create', 'get'],
   settings: ['getCustomsAgents'],
-  print: ['print', 'savePdf']
+  print: ['print', 'savePdf'],
+  export: ['excel', 'word']
 } as const satisfies { [G in ApiGroup]: readonly (keyof Api[G])[] }
 
 export function channelOf(group: string, method: string): string {

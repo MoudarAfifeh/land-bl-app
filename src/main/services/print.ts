@@ -2,14 +2,13 @@
  * Printing and PDF. Both render the /print/:id route in a hidden window, wait until the page
  * says it is ready (fonts, logo, text fitted), then print it or save it as PDF.
  */
-import { writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { app, BrowserWindow, dialog, type SaveDialogOptions, type WebContents } from 'electron'
+import { BrowserWindow, type WebContents } from 'electron'
 import type { Api } from '@shared/api'
 import { isErrorCode, ServiceError, type ErrorCode } from '@shared/errors'
 import type { Db } from '../db/client'
 import { lockNavigation, loadRenderer, secureWebPreferences } from '../windows'
 import { getDocument } from './documents'
+import { askSavePath, writeOutput } from './save-file'
 
 const READY_TIMEOUT_MS = 15_000
 
@@ -75,17 +74,12 @@ export function createPrintService(db: Db, parent: () => BrowserWindow | null): 
 
     async savePdf(id) {
       const { serialNo } = getDocument(db, id)
-      const options: SaveDialogOptions = {
+      const path = await askSavePath(parent(), {
         title: 'حفظ PDF',
-        defaultPath: join(app.getPath('documents'), `${serialNo}.pdf`),
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
-      }
-      const owner = parent()
-      const choice = owner
-        ? await dialog.showSaveDialog(owner, options)
-        : await dialog.showSaveDialog(options)
-      if (choice.canceled || !choice.filePath) return null
-      const path = choice.filePath
+        defaultName: `${serialNo}.pdf`,
+        filter: { name: 'PDF', extensions: ['pdf'] }
+      })
+      if (!path) return null
 
       await withPrintPage(id, 'PDF_FAILED', async (contents) => {
         const pdf = await contents.printToPDF({
@@ -93,7 +87,7 @@ export function createPrintService(db: Db, parent: () => BrowserWindow | null): 
           printBackground: true,
           preferCSSPageSize: true
         })
-        await writeFile(path, pdf)
+        await writeOutput(path, pdf, 'PDF_FAILED')
       })
       return { path }
     }

@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import type { SettingKey } from '@shared/fields'
+import type { CustomsAgents } from '@shared/api'
 import type { Settings } from '@shared/schemas'
 import type { Db, Tx } from '../db/client'
 import { settings } from '../db/schema'
@@ -17,4 +18,12 @@ export function setSetting<K extends SettingKey>(db: Db | Tx, key: K, value: Set
       set: { value, updatedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` }
     })
     .run()
+}
+
+/** The two agent blocks printed and exported on every document. */
+export function getCustomsAgents(db: Db | Tx): CustomsAgents {
+  return {
+    customsAgent1: getSetting(db, 'customsAgent1'),
+    customsAgent2: getSetting(db, 'customsAgent2')
+  }
 }

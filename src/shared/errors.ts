@@ -7,6 +7,9 @@ export const errorMessages = {
   INVALID_DATA: 'البيانات غير صالحة، يرجى مراجعة الحقول',
   PRINT_FAILED: 'تعذّرت الطباعة',
   PDF_FAILED: 'تعذّر حفظ ملف PDF',
+  EXCEL_FAILED: 'تعذّر تصدير ملف Excel',
+  WORD_FAILED: 'تعذّر تصدير ملف Word',
+  FILE_IN_USE: 'الملف مفتوح في برنامج آخر، أغلقه ثم أعد المحاولة',
   UNEXPECTED: 'حدث خطأ غير متوقع'
 } as const
 

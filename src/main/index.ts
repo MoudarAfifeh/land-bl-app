@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, session } from 'electron'
 import { closeDb, initDb } from './db'
 import { registerIpc } from './ipc'
+import { createExportService } from './services/export-dialog'
 import { createPrintService } from './services/print'
 import { loadRenderer, lockNavigation, secureWebPreferences } from './windows'
 
@@ -59,7 +60,10 @@ function start(): void {
   )
   try {
     const db = initDb()
-    registerIpc(db, { print: createPrintService(db, () => mainWindow) })
+    registerIpc(db, {
+      print: createPrintService(db, () => mainWindow),
+      export: createExportService(db, () => mainWindow)
+    })
   } catch (error) {
     dialog.showErrorBox('تعذّر فتح قاعدة البيانات', String(error))
     app.exit(1)

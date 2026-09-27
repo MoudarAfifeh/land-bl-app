@@ -10,10 +10,12 @@ import { sampleDocument } from './services/test-fixtures'
 let db: Db
 let handlers: Handlers
 let printed: number[]
+let exported: string[]
 
 beforeEach(() => {
   db = openTestDb()
   printed = []
+  exported = []
   handlers = createHandlers(db, {
     print: {
       print: async (id) => {
@@ -21,6 +23,16 @@ beforeEach(() => {
         return { printed: true }
       },
       savePdf: async (id) => ({ path: `${id}.pdf` })
+    },
+    export: {
+      excel: async (id) => {
+        exported.push(`excel ${id}`)
+        return { path: `${id}.xlsx` }
+      },
+      word: async (id) => {
+        exported.push(`word ${id}`)
+        return null
+      }
     }
   })
 })
@@ -96,5 +108,18 @@ describe('toResult', () => {
       'الباخرة غير نشطة ولا يمكن إصدار وثائق جديدة لها'
     )
     expect(errorMessageAr(new Error('boom'))).toBe('حدث خطأ غير متوقع')
+  })
+
+  it('passes valid ids to the export service and rejects others', async () => {
+    await expect(handlers.export.excel(4)).resolves.toEqual({ path: '4.xlsx' })
+    await expect(handlers.export.word(5)).resolves.toBeNull()
+    expect(exported).toEqual(['excel 4', 'word 5'])
+    for (const bad of [0, 1.5, '2' as unknown as number]) {
+      expect(await toResultAsync(() => handlers.export.word(bad))).toEqual({
+        ok: false,
+        code: 'INVALID_DATA'
+      })
+    }
+    expect(exported).toHaveLength(2)
   })
 })
