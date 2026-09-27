@@ -55,7 +55,7 @@ export function RestoreDialog({
 
         <dl
           data-testid="restore-summary"
-          className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm"
+          className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm"
         >
           <dt className="text-muted-foreground">الملف</dt>
           <dd>

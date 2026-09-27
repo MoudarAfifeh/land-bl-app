@@ -78,7 +78,7 @@ export function BackupTab(): React.JSX.Element {
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">النسخ الاحتياطي</h2>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           <dt className="text-muted-foreground">آخر نسخة</dt>
           <dd data-testid="backup-last">
             {status?.lastBackupAt ? (
