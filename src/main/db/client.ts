@@ -1,14 +1,17 @@
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { eq, isNull } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { settingFields } from '@shared/fields'
+import { searchText } from '@shared/search'
 import * as schema from './schema'
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database }
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 
 /**
- * Opens (or creates) the database, applies pending migrations and seeds default settings.
+ * Opens (or creates) the database, applies pending migrations, seeds default settings and fills
+ * in the history search text of documents saved before it existed.
  * `filePath` is `:memory:` in tests.
  */
 export function openDb(filePath: string, migrationsFolder: string): Db {
@@ -20,6 +23,7 @@ export function openDb(filePath: string, migrationsFolder: string): Db {
   const db = drizzle(sqlite, { schema })
   migrate(db, { migrationsFolder })
   seedSettings(db)
+  backfillSearchText(db)
   return db
 }
 
@@ -32,4 +36,30 @@ function seedSettings(db: Db): void {
       .onConflictDoNothing()
       .run()
   }
+}
+
+/** Writes `search_text` for documents that have none (saved before migration 0001). */
+export function backfillSearchText(db: Db): number {
+  const d = schema.documents
+  const rows = db
+    .select({
+      id: d.id,
+      serialNo: d.serialNo,
+      driverName: d.driverName,
+      tankerNo: d.tankerNo,
+      shipperName: d.shipperName,
+      consigneeName: d.consigneeName
+    })
+    .from(d)
+    .where(isNull(d.searchText))
+    .all()
+  db.transaction((tx) => {
+    for (const row of rows) {
+      tx.update(d)
+        .set({ searchText: searchText(row) })
+        .where(eq(d.id, row.id))
+        .run()
+    }
+  })
+  return rows.length
 }

@@ -90,6 +90,10 @@ export const documents = sqliteTable(
     carrierRep: text('carrier_rep'),
     transportDate: text('transport_date'),
 
+    // Normalised serial, driver, tanker, shipper and consignee for the history search
+    // (shared/search.ts). Written with the document; documents are never edited after save.
+    searchText: text('search_text'),
+
     ...timestamps,
     deletedAt: text('deleted_at')
   },
