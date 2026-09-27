@@ -85,6 +85,20 @@ Prompt:
 > Backup: automatic daily copy of the SQLite file to a chosen folder (keep last 30), plus manual
 > backup and restore with confirmation. Use SQLite's backup API, not a raw file copy while open.
 
+Decided in Phase 6:
+- O and I are refused for a new or changed vessel letter (`BLOCKED_PREFIXES`, one constant; existing
+  vessels keep theirs). To confirm with the client.
+- Backups of an older schema are accepted and migrated on restore; backups from a newer app version
+  are refused.
+- Restore keeps the higher serial counter per vessel (same id and letter), so numbers printed after
+  the backup are never issued again. The confirmation shows how many newer documents are removed,
+  where numbering continues, and the vessels created after the backup with their last serial.
+- Each document stores a copy of the customs agent blocks at save (migration 0002, backfilled from
+  settings); reprints and exports use that copy.
+- The home page shows the backup warning too (none, older than 7 days, or last attempt failed).
+- Automatic backup: on startup and checked hourly, when the last one is older than 24 h and there is at
+  least one document.
+
 Done when: restore from a backup brings back all documents and the next serial continues correctly.
 
 ## Phase 7 — Packaging

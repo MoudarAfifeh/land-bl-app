@@ -47,6 +47,17 @@ Follow `docs/PLAN.md` phase by phase.
 - Tests: Vitest (unit), Playwright for Electron (smoke). In unit tests `electron` is aliased to
   `src/main/test-electron.ts`, a stub that throws if a window or dialog is opened.
 - History search: `search_text` column (normalised by `shared/search.ts`), `LIKE … ESCAPE '!'`.
+- Lookups (parties, drivers, tankers): an exact duplicate (`nameKey`: case and spaces ignored) is
+  refused with `LOOKUP_DUPLICATE`; a spelling variant (`findSimilar`, same folding as the search) is
+  only warned about. Editing or deleting a lookup never changes saved documents.
+- Backup: `services/backup.ts` (SQLite online backup API via better-sqlite3 `backup()`, never a file
+  copy; `land-bl_<date>_<time>.sqlite`, newest 30 kept, safety backups `land-bl_before-restore_…` never
+  rotated). Its config (folder, last backup, last error) is `userData/backup.json`, not the settings
+  table, so a restore can't bring back an old folder or date. Automatic backup on startup (and hourly
+  check) when the last is older than 24 h and there is at least one document.
+- Restore: `services/restore.ts` copies the chosen file, checks it (integrity, app tables, not from a
+  newer app version), migrates the copy, writes a safety backup, then swaps the DB file and restarts.
+  `LAND_BL_NO_RELAUNCH=1` makes it exit without relaunching (e2e only).
 
 ## Architecture
 
@@ -54,7 +65,8 @@ Follow `docs/PLAN.md` phase by phase.
 src/
   main/        Electron main: DB, file system, exports, printing, IPC handlers
     db/        schema.ts, migrations/, client.ts
-    services/  serial.ts, documents.ts, vessels.ts, settings.ts, lookups.ts, print.ts, backup.ts,
+    services/  serial.ts, documents.ts, vessels.ts, settings.ts, lookups.ts, print.ts,
+               backup.ts, restore.ts, backup-service.ts (Electron: dialogs, schedule, restart),
                export.ts (build), export-data.ts, export-excel.ts, export-word.ts,
                export-dialog.ts + save-file.ts (Electron: save dialog, write)
     ipc.ts     one handler per service method
@@ -82,9 +94,16 @@ Rules:
 - Never reuse or renumber. Deleting is soft delete (`deleted_at`), the number stays taken.
 - Documents are never edited after save. If editing is ever added, `search_text` must be rebuilt in
   the same transaction.
+- Each document stores its own copy of the customs agent blocks (`customs_agent1/2`), taken from
+  settings at save. Print, PDF, Excel and Word of a saved document use that copy, never the settings.
 - A deleted document opens read-only; print, PDF, Excel and Word refuse it in main with
   `DOCUMENT_DELETED` (`getPrintableDocument`), not only in the UI.
 - A vessel's letter is locked once it has documents.
+- O and I are refused for a new or changed letter (they print like 0 and 1); vessels that already
+  have one keep it. The set is `BLOCKED_PREFIXES` in `shared/schemas.ts`, awaiting client confirmation.
+- A restore never lets a serial be issued twice: for a vessel with the same id and letter in both the
+  backup and the current data, the restored counter keeps the higher number. The confirmation lists
+  documents that will be removed and vessels created after the backup with their last serial.
 - New documents default to the active vessel (`settings.activeVesselId`); the user can pick another
   active vessel in wizard step 1. `vesselId` is stored but not printed or exported.
 - Inactive vessels can't receive new documents, but their existing documents still open, print,
@@ -135,5 +154,6 @@ npm run build:win  # NSIS installer
 - Formulas linking natural/standard liters, weight and barrels. Until confirmed, all quantities are manual input.
 - Date format confirmed? Default `DD/MM/YYYY`.
 - Multi-device serial strategy (later): shared LAN DB vs prefix per device.
+- Blocking O and I as vessel letters (done, see Serial number): to confirm with the client.
 - Letter reuse across vessels: the schema allows two vessels with the same letter (serials would
   repeat, e.g. two `A00001`). Not confirmed by the client; don't add a uniqueness rule or warning yet.
