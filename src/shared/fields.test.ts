@@ -1,7 +1,14 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { documentFields, documentInputFields, settingFields, MAX_SEALS } from './fields'
+import {
+  documentFields,
+  documentInputFields,
+  settingFields,
+  stepFieldKeys,
+  MAX_SEALS,
+  WIZARD_STEPS
+} from './fields'
 
 const allExportedCells = [...documentFields, ...settingFields].flatMap((f) =>
   f.excel === null ? [] : typeof f.excel === 'string' ? [f.excel] : [...f.excel]
@@ -68,5 +75,21 @@ describe('no Excel cell address outside fields.ts', () => {
       }
     }
     expect(offenders).toEqual([])
+  })
+})
+
+describe('wizard steps', () => {
+  it('puts every input field on exactly one step, never the serial', () => {
+    const keys = WIZARD_STEPS.flatMap((s) => stepFieldKeys(s))
+    expect(keys).toEqual(documentInputFields.map((f) => f.key))
+    expect(keys).not.toContain('serialNo')
+    expect(stepFieldKeys(1)).toEqual([
+      'vesselId',
+      'issueDate',
+      'shipperName',
+      'shipperAddress',
+      'consigneeName',
+      'consigneeAddress'
+    ])
   })
 })

@@ -453,3 +453,16 @@ export const documentInputFields = documentFields.filter(
 
 export const SERIAL_DIGITS = 5
 export const MAX_SEALS = 12
+
+export const WIZARD_STEPS = [1, 2, 3, 4] as const satisfies readonly WizardStep[]
+
+/** Keys the user fills in on a wizard step, in form order. */
+export function stepFieldKeys(step: WizardStep): DocumentInputField['key'][] {
+  return documentInputFields.filter((f) => f.step === step).map((f) => f.key)
+}
+
+export function documentFieldByKey<K extends DocumentFieldKey>(
+  key: K
+): Extract<DocumentField, { key: K }> {
+  return documentFields.find((f) => f.key === key) as Extract<DocumentField, { key: K }>
+}
