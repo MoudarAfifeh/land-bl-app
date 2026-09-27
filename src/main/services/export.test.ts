@@ -29,9 +29,9 @@ beforeEach(() => {
 })
 
 describe('buildExport', () => {
-  it('fills the Excel template from the saved document and the agent settings', async () => {
-    const { id } = createDocument(db, { ...longDocument, vesselId }, {})
+  it('fills the Excel template from the saved document and its agent blocks', async () => {
     setSetting(db, 'customsAgent2', 'وكيل جديد\nسطر ثاني')
+    const { id } = createDocument(db, { ...longDocument, vesselId }, {})
     const { serialNo, data } = await buildExport(db, id, 'excel', templatesDir)
     expect(serialNo).toBe('E00001')
     const cells = sheetCells(data).cells
@@ -39,6 +39,21 @@ describe('buildExport', () => {
     expect(cells[cellOf('customsAgent2')].text).toBe('وكيل جديد\nسطر ثاني')
     expect(cells[cellOf('customsAgent1')].text).toContain('معبر التنف')
     expect(new PizZip(data).file(SHEET_PART)).not.toBeNull()
+  })
+
+  it('keeps the agent blocks the document was saved with after settings change', async () => {
+    const { id } = createDocument(db, sampleDocument(vesselId), {})
+    const before = await buildExport(db, id, 'excel', templatesDir)
+    setSetting(db, 'customsAgent1', 'مخلص آخر')
+    setSetting(db, 'customsAgent2', null)
+    const after = await buildExport(db, id, 'excel', templatesDir)
+    expect(sheetCells(after.data).cells).toEqual(sheetCells(before.data).cells)
+    expect(sheetCells(after.data).cells[cellOf('customsAgent1')].text).toContain('معبر التنف')
+
+    const word = await buildExport(db, id, 'word', templatesDir)
+    const xml = new PizZip(word.data).file('word/document.xml')!.asText()
+    expect(xml).toContain('معبر الوليد')
+    expect(xml).not.toContain('مخلص آخر')
   })
 
   it('fills the Word template', async () => {

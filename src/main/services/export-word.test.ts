@@ -22,14 +22,18 @@ const agents = {
 
 const longView: DocumentView = {
   ...longDocument,
+  ...agents,
   vesselId: 1,
   id: 1,
   serialNo: 'T00001',
   deletedAt: null
 }
 
-function render(view: DocumentView, a: typeof agents | Record<string, null> = agents): Buffer {
-  return fillDocument(template, wordData(exportCells(view, a as typeof agents)))
+function render(
+  view: Omit<DocumentView, keyof typeof agents>,
+  a: typeof agents | Record<keyof typeof agents, null> = agents
+): Buffer {
+  return fillDocument(template, wordData(exportCells({ ...view, ...a })))
 }
 
 const documentXml = (docx: Buffer): string => new PizZip(docx).file('word/document.xml')!.asText()

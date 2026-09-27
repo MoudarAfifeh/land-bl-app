@@ -8,7 +8,14 @@ const LRM = '\u200E'
 const agents = { customsAgent1: 'المخلص السوري\r\nسطر ٢', customsAgent2: null }
 
 function view(overrides: Partial<DocumentView> = {}): DocumentView {
-  return { ...sampleDocument(1), id: 1, serialNo: 'A00001', deletedAt: null, ...overrides }
+  return {
+    ...sampleDocument(1),
+    ...agents,
+    id: 1,
+    serialNo: 'A00001',
+    deletedAt: null,
+    ...overrides
+  }
 }
 
 const valueOf = (cells: ReturnType<typeof exportCells>, key: string): unknown =>
@@ -16,11 +23,11 @@ const valueOf = (cells: ReturnType<typeof exportCells>, key: string): unknown =>
 
 describe('exportCells', () => {
   it('gives every export slot a value, in slot order', () => {
-    expect(exportCells(view(), agents).map((c) => c.key)).toEqual(exportSlots().map((s) => s.key))
+    expect(exportCells(view()).map((c) => c.key)).toEqual(exportSlots().map((s) => s.key))
   })
 
   it('writes dates as DD/MM/YYYY text and numbers as numbers', () => {
-    const cells = exportCells(view({ ...longDocument, vesselId: 1 }), agents)
+    const cells = exportCells(view({ ...longDocument, vesselId: 1 }))
     expect(valueOf(cells, 'issueDate')).toBe('27/09/2026')
     expect(valueOf(cells, 'supplyOrderDate')).toBe('20/09/2026')
     expect(valueOf(cells, 'qtyNaturalL')).toBe(36123.456)
@@ -29,10 +36,7 @@ describe('exportCells', () => {
   })
 
   it('leaves empty values null', () => {
-    const cells = exportCells(
-      view({ weightKg: null, shipperAddress: '  ', passportNo: null }),
-      agents
-    )
+    const cells = exportCells(view({ weightKg: null, shipperAddress: '  ', passportNo: null }))
     expect(valueOf(cells, 'weightKg')).toBeNull()
     expect(valueOf(cells, 'shipperAddress')).toBeNull()
     expect(valueOf(cells, 'passportNo')).toBeNull()
@@ -40,7 +44,7 @@ describe('exportCells', () => {
   })
 
   it('fills seals in order, skipping blanks, and leaves the rest empty', () => {
-    const cells = exportCells(view({ seals: ['S1', ' ', 'S2'] }), agents)
+    const cells = exportCells(view({ seals: ['S1', ' ', 'S2'] }))
     expect(valueOf(cells, 'seal1')).toBe('S1')
     expect(valueOf(cells, 'seal2')).toBe('S2')
     expect(valueOf(cells, 'seal3')).toBeNull()
@@ -48,7 +52,7 @@ describe('exportCells', () => {
   })
 
   it('keeps agent line breaks as \n', () => {
-    expect(valueOf(exportCells(view(), agents), 'customsAgent1')).toBe('المخلص السوري\nسطر ٢')
+    expect(valueOf(exportCells(view()), 'customsAgent1')).toBe('المخلص السوري\nسطر ٢')
   })
 })
 
@@ -69,7 +73,7 @@ describe('wordText', () => {
 
 describe('wordData', () => {
   it('turns every value into a string, empty for null', () => {
-    const data = wordData(exportCells(view({ weightKg: null, qtyNaturalL: 36000 }), agents))
+    const data = wordData(exportCells(view({ weightKg: null, qtyNaturalL: 36000 })))
     expect(data.weightKg).toBe('')
     expect(data.qtyNaturalL).toBe(`${LRM}36000${LRM}`)
     expect(Object.values(data).every((v) => typeof v === 'string')).toBe(true)

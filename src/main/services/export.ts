@@ -10,7 +10,6 @@ import { getDocumentView, getPrintableDocument } from './documents'
 import { exportCells, wordData } from './export-data'
 import { fillWorkbook } from './export-excel'
 import { fillDocument } from './export-word'
-import { getCustomsAgents } from './settings'
 
 export const exportFormats = {
   excel: { template: 'land-bl.xlsx', extension: 'xlsx', filter: 'Excel', failure: 'EXCEL_FAILED' },
@@ -26,7 +25,7 @@ export async function buildExport(
 ): Promise<{ serialNo: string; data: Buffer }> {
   getPrintableDocument(db, id) // a deleted document is never exported
   const doc = getDocumentView(db, id)
-  const cells = exportCells(doc, getCustomsAgents(db))
+  const cells = exportCells(doc)
   const template = await readFile(join(templatesDir, exportFormats[format].template))
   const data =
     format === 'excel' ? fillWorkbook(template, cells) : fillDocument(template, wordData(cells))

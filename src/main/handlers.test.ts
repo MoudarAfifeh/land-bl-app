@@ -71,6 +71,7 @@ describe('ipc handlers', () => {
 
     expect(handlers.documents.get(id)).toEqual({
       ...input,
+      ...handlers.settings.getCustomsAgents(),
       id,
       serialNo: 'B00001',
       deletedAt: null

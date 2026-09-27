@@ -2,7 +2,7 @@
  * The values that go into the Excel and Word templates, one per export slot of fields.ts: the
  * same text as the print view, except that Excel gets numbers as numbers.
  */
-import type { CustomsAgents, DocumentView } from '@shared/api'
+import type { DocumentView } from '@shared/api'
 import { exportSlots, SEAL_KEYS, type ExportSlot } from '@shared/fields'
 import { displayValue, formatNumber } from '@shared/format'
 
@@ -11,11 +11,11 @@ export interface ExportCell extends ExportSlot {
   value: string | number | null
 }
 
-export function exportCells(doc: DocumentView, agents: CustomsAgents): ExportCell[] {
+/** The agent blocks come from the document's own copy, never from the current settings. */
+export function exportCells(doc: DocumentView): ExportCell[] {
   const seals = doc.seals.map((s) => s.trim()).filter(Boolean)
   const source: Record<string, unknown> = {
     ...doc,
-    ...agents,
     ...Object.fromEntries(SEAL_KEYS.map((key, i) => [key, seals[i] ?? null]))
   }
   return exportSlots().map((slot) => {

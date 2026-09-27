@@ -24,13 +24,15 @@ export interface CreateDocumentOptions {
 
 /**
  * A saved document as the UI reads it. `vesselId` is kept but never printed. `deletedAt` is set
- * for a soft-deleted document, which can still be opened but not printed or exported.
+ * for a soft-deleted document, which can still be opened but not printed or exported. The agent
+ * blocks are the document's own copy, taken from settings when it was saved.
  */
-export type DocumentView = DocumentInput & {
-  id: number
-  serialNo: string
-  deletedAt: string | null
-}
+export type DocumentView = DocumentInput &
+  CustomsAgents & {
+    id: number
+    serialNo: string
+    deletedAt: string | null
+  }
 
 /** One row of the documents history. */
 export interface DocumentListRow {

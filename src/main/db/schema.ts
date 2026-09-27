@@ -90,6 +90,11 @@ export const documents = sqliteTable(
     carrierRep: text('carrier_rep'),
     transportDate: text('transport_date'),
 
+    // The customs agent blocks (settings) as they were when the document was saved, so a later
+    // settings change never alters a reprint or re-export. Backfilled by migration 0002.
+    customsAgent1: text('customs_agent1'),
+    customsAgent2: text('customs_agent2'),
+
     // Normalised serial, driver, tanker, shipper and consignee for the history search
     // (shared/search.ts). Written with the document; documents are never edited after save.
     searchText: text('search_text'),

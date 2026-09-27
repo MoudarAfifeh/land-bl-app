@@ -22,6 +22,7 @@ const agents = {
 
 const longView: DocumentView = {
   ...longDocument,
+  ...agents,
   vesselId: 1,
   id: 1,
   serialNo: 'T00001',
@@ -31,7 +32,7 @@ const longView: DocumentView = {
 let output: Buffer
 
 beforeAll(() => {
-  output = fillWorkbook(template, exportCells(longView, agents))
+  output = fillWorkbook(template, exportCells(longView))
   saveTestOutput('long-12-seals.xlsx', output)
 })
 
@@ -133,14 +134,15 @@ describe('values land in the right cells', () => {
 describe('special values', () => {
   it('escapes & < > and keeps quotes, Arabic text and line breaks', () => {
     const tricky = `شركة "الأمل" & أولاده <فرع 2> 'دمشق'`
+    const multiLine = { customsAgent1: 'سطر أول & "ثاني"\nLine <2>\n\nرابع', customsAgent2: null }
     const view: DocumentView = {
       ...sampleDocument(1, { shipperName: tricky, consigneeName: 'A&B <C> "D" \'E\'' }),
+      ...multiLine,
       id: 2,
       serialNo: 'B00002',
       deletedAt: null
     }
-    const multiLine = { customsAgent1: 'سطر أول & "ثاني"\nLine <2>\n\nرابع', customsAgent2: null }
-    const out = fillWorkbook(template, exportCells(view, multiLine))
+    const out = fillWorkbook(template, exportCells(view))
     saveTestOutput('special-characters.xlsx', out)
 
     const c = sheetCells(out).cells
@@ -159,12 +161,11 @@ describe('special values', () => {
       ...sampleDocument(1, { weightKg: null }),
       id: 3,
       serialNo: 'A00003',
-      deletedAt: null
+      deletedAt: null,
+      customsAgent1: null,
+      customsAgent2: null
     }
-    const out = fillWorkbook(
-      template,
-      exportCells(view, { customsAgent1: null, customsAgent2: null })
-    )
+    const out = fillWorkbook(template, exportCells(view))
     const before = sheetCells(template).cells
     const c = sheetCells(out).cells
     for (const key of ['customsAgent1', 'weightKg', 'seal12']) {

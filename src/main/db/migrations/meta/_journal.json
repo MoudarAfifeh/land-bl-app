@@ -15,6 +15,13 @@
       "when": 1790541210233,
       "tag": "0001_history_search",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790542631471,
+      "tag": "0002_document_agents",
+      "breakpoints": true
     }
   ]
 }

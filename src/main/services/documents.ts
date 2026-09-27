@@ -18,10 +18,11 @@ import type {
 import { documentInputFields } from '@shared/fields'
 import { saveDriver, saveParty, saveTanker } from './lookups'
 import { takeNextSerial } from './serial'
+import { getCustomsAgents } from './settings'
 
 /**
- * The only way to create a document. Validates, takes the serial, inserts, and adds new
- * parties / tanker / driver to the lookups, all in one transaction: if anything fails, no
+ * The only way to create a document. Validates, takes the serial, inserts it with a copy of the
+ * customs agent blocks from settings, and adds new parties / tanker / driver to the lookups, all in one transaction: if anything fails, no
  * number is burnt and no lookup row is left behind.
  */
 export function createDocument(
@@ -36,7 +37,13 @@ export function createDocument(
       const doc = tx
         .insert(documents)
         // Documents are never edited after save, so search_text can't go stale.
-        .values({ ...data, number, serialNo, searchText: searchText({ ...data, serialNo }) })
+        .values({
+          ...data,
+          ...getCustomsAgents(tx),
+          number,
+          serialNo,
+          searchText: searchText({ ...data, serialNo })
+        })
         .returning()
         .get()
 
@@ -71,13 +78,15 @@ export function getDocument(db: Db, id: number): DocumentRow & { vessel: Vessel 
   return { ...row.documents, vessel: row.vessels }
 }
 
-/** A document as the UI reads it: its input fields plus id and serial. */
+/** A document as the UI reads it: its input fields, id, serial and its own agent blocks. */
 export function getDocumentView(db: Db, id: number): DocumentView {
   const row = getDocument(db, id)
   const view: Record<string, unknown> = {
     id: row.id,
     serialNo: row.serialNo,
-    deletedAt: row.deletedAt
+    deletedAt: row.deletedAt,
+    customsAgent1: row.customsAgent1,
+    customsAgent2: row.customsAgent2
   }
   for (const f of documentInputFields) view[f.key] = row[f.key]
   return view as DocumentView

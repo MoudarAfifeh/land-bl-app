@@ -71,8 +71,12 @@ Quantity formulas are NOT confirmed yet. Do not auto-calculate until the client 
 | customsAgent1 | Syrian agent block (multi-line) | A27 | {customsAgent1} |
 | customsAgent2 | Iraqi agent block (multi-line) | A30 | {customsAgent2} |
 
-The Excel template already contains the current agent text. Overwrite A27/A30 from settings on export
-so a settings change is reflected in new documents.
+The Excel template already contains the current agent text. Overwrite A27/A30 on export.
+
+Each document stores its own copy of both agent blocks (`customs_agent1`, `customs_agent2` columns),
+taken from settings when it is saved. Print, PDF, Excel and Word of a saved document use that copy,
+so a settings change only affects documents saved afterwards (and the wizard's review preview).
+Documents saved before this rule (migration 0002) were backfilled from the settings at that time.
 
 ## Vessels (الباخرة)
 

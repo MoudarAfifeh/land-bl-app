@@ -20,8 +20,10 @@ function PrintPage(): React.JSX.Element {
       body.printError = code
       setError(errorMessageAr(e))
     }
-    Promise.all([window.api.documents.get(Number(id)), window.api.settings.getCustomsAgents()])
-      .then(([doc, agents]) => setData(toPrintData(doc, agents)))
+    // A saved document prints with its own agent blocks, not the current settings.
+    window.api.documents
+      .get(Number(id))
+      .then((doc) => setData(toPrintData(doc, doc)))
       .catch(fail)
     return () => {
       delete body.printReady

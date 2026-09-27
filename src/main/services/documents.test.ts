@@ -12,6 +12,7 @@ import {
   listDocuments,
   softDeleteDocument
 } from './documents'
+import { setSetting } from './settings'
 import { sampleDocument } from './test-fixtures'
 import { createVessel, updateVessel } from './vessels'
 
@@ -41,6 +42,23 @@ const serials = (query: DocumentListQuery = {}): string[] =>
 
 /** Text on several lines, without escape sequences. */
 const lines = (...parts: string[]): string => parts.join(String.fromCharCode(10))
+
+describe('customs agent blocks', () => {
+  it('are copied from settings when the document is saved and kept after a change', () => {
+    setSetting(db, 'customsAgent1', lines('مخلص أول', '0963'))
+    const id = add(vesselA)
+    setSetting(db, 'customsAgent1', 'مخلص جديد')
+    setSetting(db, 'customsAgent2', null)
+
+    const view = getDocumentView(db, id)
+    expect(view.customsAgent1).toBe(lines('مخلص أول', '0963'))
+    expect(view.customsAgent2).toContain('معبر الوليد')
+    expect(getDocumentView(db, add(vesselA))).toMatchObject({
+      customsAgent1: 'مخلص جديد',
+      customsAgent2: null
+    })
+  })
+})
 
 describe('search_text', () => {
   it('is written with the document, normalised, one field per line', () => {

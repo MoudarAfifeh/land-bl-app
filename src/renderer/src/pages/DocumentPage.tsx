@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Copy, Trash2 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import type { CustomsAgents, DocumentView, VesselSummary } from '@shared/api'
+import type { DocumentView, VesselSummary } from '@shared/api'
 import { errorMessageAr } from '@shared/errors'
 import { DeleteDocumentDialog } from '@/components/documents/DeleteDocumentDialog'
 import { PrintActions } from '@/components/print/PrintActions'
@@ -12,7 +12,6 @@ import { isoToDisplay, todayIso } from '@/lib/format'
 
 interface Loaded {
   doc: DocumentView
-  agents: CustomsAgents
   vessel: VesselSummary | undefined
 }
 
@@ -31,13 +30,9 @@ function DocumentPage(): React.JSX.Element {
 
   useEffect(() => {
     let current = true
-    Promise.all([
-      window.api.documents.get(Number(id)),
-      window.api.settings.getCustomsAgents(),
-      window.api.vessels.listAll()
-    ]).then(
-      ([doc, agents, vessels]) =>
-        current && setLoaded({ doc, agents, vessel: vessels.find((v) => v.id === doc.vesselId) }),
+    Promise.all([window.api.documents.get(Number(id)), window.api.vessels.listAll()]).then(
+      ([doc, vessels]) =>
+        current && setLoaded({ doc, vessel: vessels.find((v) => v.id === doc.vesselId) }),
       (e: unknown) => current && setError(errorMessageAr(e))
     )
     return () => {
@@ -104,7 +99,7 @@ function DocumentPage(): React.JSX.Element {
               </div>
             </div>
           )}
-          <PrintPreview data={toPrintData(doc, loaded.agents)} />
+          <PrintPreview data={toPrintData(doc, doc)} />
           <DeleteDocumentDialog
             target={confirmDelete ? { id: doc.id, serialNo: doc.serialNo } : null}
             onClose={() => setConfirmDelete(false)}
