@@ -1,79 +1,48 @@
+import { useMemo } from 'react'
 import { useWatch } from 'react-hook-form'
 import { Pencil } from 'lucide-react'
-import type { VesselSummary } from '@shared/api'
-import {
-  documentInputFields,
-  WIZARD_STEPS,
-  type DocumentInputField,
-  type WizardStep
-} from '@shared/fields'
+import type { CustomsAgents, VesselSummary } from '@shared/api'
+import { WIZARD_STEPS, type WizardStep } from '@shared/fields'
 import { Button } from '@/components/ui/button'
-import { formatNumber, isoToDisplay } from '@/lib/format'
+import { toPrintData } from '@/components/print/print-data'
+import { PrintPreview } from '@/components/print/PrintPreview'
 import type { FormValues } from './form'
 import { stepTitles } from './steps'
 
-function display(f: DocumentInputField, values: FormValues, vessels: VesselSummary[]): string {
-  const v = values[f.key]
-  if (f.key === 'vesselId') {
-    const vessel = vessels.find((x) => x.id === v)
-    return vessel ? `${vessel.name} — ${vessel.prefix}` : ''
-  }
-  switch (f.type) {
-    case 'date':
-      return isoToDisplay(v as string)
-    case 'number':
-      return formatNumber(v as number | null)
-    case 'stringList':
-      return (v as { value: string }[])
-        .map((s) => s.value.trim())
-        .filter(Boolean)
-        .join('، ')
-    default:
-      return String(v ?? '').trim()
-  }
-}
-
 interface ReviewStepProps {
   vessels: VesselSummary[]
+  agents: CustomsAgents
   onEdit: (step: WizardStep) => void
 }
 
-/** Read-only summary grouped by step. The print layout comes in Phase 3. */
-export function ReviewStep({ vessels, onEdit }: ReviewStepProps): React.JSX.Element {
+/** The document exactly as it will print, with a way back to each step. */
+export function ReviewStep({ vessels, agents, onEdit }: ReviewStepProps): React.JSX.Element {
   const values = useWatch<FormValues>() as FormValues
+  const vessel = vessels.find((v) => v.id === values.vesselId)
+  const data = useMemo(
+    () =>
+      toPrintData({ ...values, serialNo: null, seals: values.seals.map((s) => s.value) }, agents),
+    [values, agents]
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      {WIZARD_STEPS.map((step) => (
-        <section key={step} className="rounded-lg border p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">{stepTitles[step]}</h2>
-            <Button type="button" variant="link" size="sm" onClick={() => onEdit(step)}>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        {/* The vessel isn't printed, so show it here to check before saving. */}
+        <p className="text-sm">
+          <span className="text-muted-foreground">الباخرة: </span>
+          <span className="font-medium">{vessel ? `${vessel.name} — ${vessel.prefix}` : '—'}</span>
+        </p>
+        <nav aria-label="تعديل الخطوات" className="flex flex-wrap gap-1">
+          {WIZARD_STEPS.map((step) => (
+            <Button key={step} type="button" variant="link" size="sm" onClick={() => onEdit(step)}>
               <Pencil />
-              تعديل
+              تعديل {stepTitles[step]}
             </Button>
-          </div>
-          <dl className="grid gap-x-6 gap-y-2 text-sm md:grid-cols-2">
-            {documentInputFields
-              .filter((f) => f.step === step)
-              .map((f) => {
-                const text = display(f, values, vessels)
-                return (
-                  <div key={f.key} className="flex gap-2">
-                    <dt className="shrink-0 text-muted-foreground">{f.labelAr}:</dt>
-                    <dd
-                      // Numbers and dates read left to right, or "-40" shows as "40-".
-                      dir={f.type === 'number' || f.type === 'date' ? 'ltr' : undefined}
-                      className="break-words whitespace-pre-line"
-                    >
-                      {text || '—'}
-                    </dd>
-                  </div>
-                )
-              })}
-          </dl>
-        </section>
-      ))}
+          ))}
+        </nav>
+      </div>
+      <PrintPreview data={data} pendingSerial="يُحدد عند الحفظ" />
     </div>
   )
 }

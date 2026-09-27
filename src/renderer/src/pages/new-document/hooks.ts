@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { get, useFormState, useWatch, type UseFormReturn } from 'react-hook-form'
-import type { VesselSummary } from '@shared/api'
+import type { CustomsAgents, VesselSummary } from '@shared/api'
 import type { DocumentInput } from '@shared/schemas'
 import { errorMessageAr } from '@shared/errors'
 import {
@@ -18,17 +18,20 @@ export interface WizardData {
   parties: Party[]
   drivers: Driver[]
   tankers: Tanker[]
+  /** Printed on the review page. */
+  agents: CustomsAgents
 }
 
 async function loadWizardData(): Promise<WizardData> {
-  const [vessels, activeVessel, parties, drivers, tankers] = await Promise.all([
+  const [vessels, activeVessel, parties, drivers, tankers, agents] = await Promise.all([
     window.api.vessels.listActive(),
     window.api.vessels.getActive(),
     window.api.lookups.listParties(),
     window.api.lookups.listDrivers(),
-    window.api.lookups.listTankers()
+    window.api.lookups.listTankers(),
+    window.api.settings.getCustomsAgents()
   ])
-  return { vessels, activeVessel, parties, drivers, tankers }
+  return { vessels, activeVessel, parties, drivers, tankers, agents }
 }
 
 /** Vessels and lookup lists for the wizard; `reload` after saving picks up new names. */

@@ -11,6 +11,7 @@ import { todayIso } from '@/lib/format'
 import { buildDefaults, formResolver, stepOfField, type FormValues } from './form'
 import { useFollowCopies, type WizardData } from './hooks'
 import { LeaveGuard } from './LeaveGuard'
+import { PrintActions } from '@/components/print/PrintActions'
 import { ReviewStep } from './ReviewStep'
 import { Step1Parties } from './Step1Parties'
 import { Step2Loading } from './Step2Loading'
@@ -41,7 +42,7 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
   const resetCopies = useFollowCopies(form)
   const [step, setStep] = useState<Step>(1)
   const [reached, setReached] = useState<Step>(1)
-  const [savedSerial, setSavedSerial] = useState<string | null>(null)
+  const [saved, setSaved] = useState<{ id: number; serialNo: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const savingRef = useRef(false)
@@ -51,9 +52,9 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
   // Keyboard users land on the first field of each step.
   useEffect(() => {
     // After saving, "new document" (Button forwards no ref under React 18, so query the panel).
-    if (savedSerial) successRef.current?.querySelector('button')?.focus()
+    if (saved) successRef.current?.querySelector('button')?.focus()
     else focusableFields(stepRefs.current[step] ?? null)[0]?.focus()
-  }, [step, savedSerial])
+  }, [step, saved])
 
   /** Moves to a step; going forward validates every step in between. */
   async function goTo(target: Step): Promise<void> {
@@ -94,18 +95,18 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
 
   const submit = form.handleSubmit(async (input) => {
     setSaveError(null)
-    let serialNo: string
+    let created: { id: number; serialNo: string }
     try {
       const [updateShipperAddress, updateConsigneeAddress, updateDriverPassport] = form.getValues([
         'updateShipperAddress',
         'updateConsigneeAddress',
         'updateDriverPassport'
       ])
-      ;({ serialNo } = await window.api.documents.create(input, {
+      created = await window.api.documents.create(input, {
         updateShipperAddress,
         updateConsigneeAddress,
         updateDriverPassport
-      }))
+      })
     } catch (e) {
       setSaveError(errorMessageAr(e))
       return
@@ -113,7 +114,7 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
     // Saved: clear the form so leaving isn't blocked, then refresh the lookups with new names.
     form.reset(defaultsFor(data))
     resetCopies()
-    setSavedSerial(serialNo)
+    setSaved(created)
     reload().catch(() => undefined)
   }, jumpToFirstError)
 
@@ -132,12 +133,12 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
     form.reset(defaultsFor(data))
     resetCopies()
     setSaveError(null)
-    setSavedSerial(null)
+    setSaved(null)
     setStep(1)
     setReached(1)
   }
 
-  if (savedSerial) {
+  if (saved) {
     return (
       <div
         ref={successRef}
@@ -148,7 +149,7 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted-foreground">رقم البوليصة</span>
           <span dir="ltr" className="font-mono text-5xl font-bold tracking-wider">
-            {savedSerial}
+            {saved.serialNo}
           </span>
         </div>
         <div className="mt-2 flex gap-2">
@@ -157,6 +158,7 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
             <Link to="/history">الذهاب إلى السجل</Link>
           </Button>
         </div>
+        <PrintActions documentId={saved.id} />
       </div>
     )
   }
@@ -182,7 +184,11 @@ export function Wizard({ data, reload }: WizardProps): React.JSX.Element {
             {s === 3 && <Step3Quality />}
             {s === 4 && <Step4Transport data={data} />}
             {s === REVIEW_STEP && step === REVIEW_STEP && (
-              <ReviewStep vessels={data.vessels} onEdit={(target) => setStep(target)} />
+              <ReviewStep
+                vessels={data.vessels}
+                agents={data.agents}
+                onEdit={(target) => setStep(target)}
+              />
             )}
           </section>
         ))}
