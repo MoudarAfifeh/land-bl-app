@@ -1,6 +1,7 @@
 import { createHashRouter } from 'react-router'
 import HomePage from '@/pages/HomePage'
 import NewDocumentPage from '@/pages/NewDocumentPage'
+import DocumentPage from '@/pages/DocumentPage'
 import HistoryPage from '@/pages/HistoryPage'
 import SettingsPage from '@/pages/SettingsPage'
 import PrintPage from '@/pages/PrintPage'
@@ -11,6 +12,7 @@ export const router = createHashRouter([
   { path: '/', element: <HomePage /> },
   { path: '/new', element: <NewDocumentPage /> },
   { path: '/history', element: <HistoryPage /> },
+  { path: '/documents/:id', element: <DocumentPage /> },
   { path: '/settings', element: <SettingsPage /> },
   { path: '/print/:id', element: <PrintPage /> }
 ])
