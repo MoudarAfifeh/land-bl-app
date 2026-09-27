@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ExportFormat } from '@shared/api'
 import type { Db } from '../db/client'
-import { getDocumentView } from './documents'
+import { getDocumentView, getPrintableDocument } from './documents'
 import { exportCells, wordData } from './export-data'
 import { fillWorkbook } from './export-excel'
 import { fillDocument } from './export-word'
@@ -24,6 +24,7 @@ export async function buildExport(
   format: ExportFormat,
   templatesDir: string
 ): Promise<{ serialNo: string; data: Buffer }> {
+  getPrintableDocument(db, id) // a deleted document is never exported
   const doc = getDocumentView(db, id)
   const cells = exportCells(doc, getCustomsAgents(db))
   const template = await readFile(join(templatesDir, exportFormats[format].template))

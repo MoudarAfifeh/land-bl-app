@@ -69,7 +69,12 @@ describe('ipc handlers', () => {
     const { id } = handlers.documents.create(input, {})
     updateVessel(db, vessel.id, { isActive: false })
 
-    expect(handlers.documents.get(id)).toEqual({ ...input, id, serialNo: 'B00001' })
+    expect(handlers.documents.get(id)).toEqual({
+      ...input,
+      id,
+      serialNo: 'B00001',
+      deletedAt: null
+    })
     expect(toResult(() => handlers.documents.get(999))).toEqual({
       ok: false,
       code: 'DOCUMENT_NOT_FOUND'
@@ -121,5 +126,35 @@ describe('toResult', () => {
       })
     }
     expect(exported).toHaveLength(2)
+  })
+
+  it('lists, filters and soft-deletes documents; lists inactive vessels too', () => {
+    const a = handlers.vessels.create(
+      { name: 'MT A', prefix: 'A', arrivalDate: null, isActive: true },
+      { makeActive: true }
+    )
+    const b = handlers.vessels.create(
+      { name: 'MT Z', prefix: 'Z', arrivalDate: null, isActive: true },
+      { makeActive: false }
+    )
+    updateVessel(db, b.id, { isActive: false })
+    expect(handlers.vessels.listAll().map((v) => v.prefix)).toEqual(['A', 'Z'])
+    expect(handlers.vessels.listActive().map((v) => v.prefix)).toEqual(['A'])
+
+    const first = handlers.documents.create(sampleDocument(a.id, { driverName: 'خالد' }), {})
+    handlers.documents.create(sampleDocument(a.id), {})
+    expect(handlers.documents.list({ search: 'خالد' }).rows.map((r) => r.id)).toEqual([first.id])
+
+    handlers.documents.softDelete(first.id)
+    expect(handlers.documents.list({}).total).toBe(1)
+    expect(handlers.documents.list({ includeDeleted: true }).total).toBe(2)
+    expect(toResult(() => handlers.documents.softDelete(-1))).toEqual({
+      ok: false,
+      code: 'INVALID_DATA'
+    })
+    expect(toResult(() => handlers.documents.list({ pageSize: 1000 }))).toEqual({
+      ok: false,
+      code: 'INVALID_DATA'
+    })
   })
 })

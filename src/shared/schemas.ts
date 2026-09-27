@@ -102,3 +102,19 @@ export const vesselInputSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]$/, messages.prefix)
 })
+
+export const HISTORY_PAGE_SIZE = 50
+
+/** Filters of the documents history; validated in main before querying. */
+export const documentListQuerySchema = z.object({
+  search: z.string().max(200).default(''),
+  vesselId: z.number().int().positive().nullable().default(null),
+  /** Issue date range, inclusive, ISO. */
+  from: isoDate.nullable().default(null),
+  to: isoDate.nullable().default(null),
+  includeDeleted: z.boolean().default(false),
+  page: z.number().int().positive().default(1),
+  pageSize: z.number().int().min(1).max(100).default(HISTORY_PAGE_SIZE)
+})
+
+export type DocumentListQuery = z.input<typeof documentListQuerySchema>

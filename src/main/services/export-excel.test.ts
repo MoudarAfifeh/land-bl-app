@@ -20,7 +20,13 @@ const agents = {
   customsAgent2: 'المخلص العراقي / معبر الوليد\nبشار أبو حسن\n00964-772-3247959'
 }
 
-const longView: DocumentView = { ...longDocument, vesselId: 1, id: 1, serialNo: 'T00001' }
+const longView: DocumentView = {
+  ...longDocument,
+  vesselId: 1,
+  id: 1,
+  serialNo: 'T00001',
+  deletedAt: null
+}
 
 let output: Buffer
 
@@ -130,7 +136,8 @@ describe('special values', () => {
     const view: DocumentView = {
       ...sampleDocument(1, { shipperName: tricky, consigneeName: 'A&B <C> "D" \'E\'' }),
       id: 2,
-      serialNo: 'B00002'
+      serialNo: 'B00002',
+      deletedAt: null
     }
     const multiLine = { customsAgent1: 'سطر أول & "ثاني"\nLine <2>\n\nرابع', customsAgent2: null }
     const out = fillWorkbook(template, exportCells(view, multiLine))
@@ -151,7 +158,8 @@ describe('special values', () => {
     const view: DocumentView = {
       ...sampleDocument(1, { weightKg: null }),
       id: 3,
-      serialNo: 'A00003'
+      serialNo: 'A00003',
+      deletedAt: null
     }
     const out = fillWorkbook(
       template,

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { app, type BrowserWindow } from 'electron'
 import type { Api, ExportFormat } from '@shared/api'
 import type { Db } from '../db/client'
-import { getDocument } from './documents'
+import { getPrintableDocument } from './documents'
 import { buildExport, exportFormats } from './export'
 import { askSavePath, serviceErrorOf, writeOutput } from './save-file'
 
@@ -16,7 +16,7 @@ function templatesFolder(): string {
 
 export function createExportService(db: Db, parent: () => BrowserWindow | null): Api['export'] {
   async function run(id: number, format: ExportFormat): Promise<{ path: string } | null> {
-    const { serialNo } = getDocument(db, id) // DOCUMENT_NOT_FOUND before the dialog
+    const { serialNo } = getPrintableDocument(db, id) // NOT_FOUND / DELETED before the dialog
     const { extension, filter, failure } = exportFormats[format]
     const path = await askSavePath(parent(), {
       title: `تصدير ${filter}`,

@@ -7,7 +7,7 @@ import type { Api } from '@shared/api'
 import { isErrorCode, ServiceError, type ErrorCode } from '@shared/errors'
 import type { Db } from '../db/client'
 import { lockNavigation, loadRenderer, secureWebPreferences } from '../windows'
-import { getDocument } from './documents'
+import { getPrintableDocument } from './documents'
 import { askSavePath, writeOutput } from './save-file'
 
 const READY_TIMEOUT_MS = 15_000
@@ -67,13 +67,13 @@ function print(contents: WebContents): Promise<boolean> {
 export function createPrintService(db: Db, parent: () => BrowserWindow | null): Api['print'] {
   return {
     async print(id) {
-      getDocument(db, id) // DOCUMENT_NOT_FOUND before opening a window
+      getPrintableDocument(db, id) // NOT_FOUND / DELETED before opening a window
       const printed = await withPrintPage(id, 'PRINT_FAILED', print)
       return { printed }
     },
 
     async savePdf(id) {
-      const { serialNo } = getDocument(db, id)
+      const { serialNo } = getPrintableDocument(db, id) // before the dialog
       const path = await askSavePath(parent(), {
         title: 'حفظ PDF',
         defaultName: `${serialNo}.pdf`,

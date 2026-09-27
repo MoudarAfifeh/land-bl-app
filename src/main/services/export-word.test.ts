@@ -20,7 +20,13 @@ const agents = {
   customsAgent2: 'المخلص العراقي / معبر الوليد\nبشار أبو حسن\n00964-772-3247959'
 }
 
-const longView: DocumentView = { ...longDocument, vesselId: 1, id: 1, serialNo: 'T00001' }
+const longView: DocumentView = {
+  ...longDocument,
+  vesselId: 1,
+  id: 1,
+  serialNo: 'T00001',
+  deletedAt: null
+}
 
 function render(view: DocumentView, a: typeof agents | Record<string, null> = agents): Buffer {
   return fillDocument(template, wordData(exportCells(view, a as typeof agents)))
@@ -100,7 +106,12 @@ describe('the filled document', () => {
 
   it('leaves no placeholder and never prints "undefined" or "null", even when sparse', () => {
     const sparse = render(
-      { ...sampleDocument(1, { seals: [], qtyNaturalL: null }), id: 2, serialNo: 'A00002' },
+      {
+        ...sampleDocument(1, { seals: [], qtyNaturalL: null }),
+        id: 2,
+        serialNo: 'A00002',
+        deletedAt: null
+      },
       { customsAgent1: null, customsAgent2: null }
     )
     saveTestOutput('sparse.docx', sparse)
@@ -131,7 +142,12 @@ describe('the filled document', () => {
 
   it('escapes special characters', () => {
     const tricky = `شركة "الأمل" & أولاده <فرع 2> 'دمشق'`
-    const doc = render({ ...sampleDocument(1, { shipperName: tricky }), id: 3, serialNo: 'A00003' })
+    const doc = render({
+      ...sampleDocument(1, { shipperName: tricky }),
+      id: 3,
+      serialNo: 'A00003',
+      deletedAt: null
+    })
     expect(plainText(doc)).toContain(tricky)
     expect(() => parseXml(documentXml(doc))).not.toThrow()
   })

@@ -7,7 +7,12 @@ import { z, ZodError } from 'zod'
 import type { Api, IpcResult } from '@shared/api'
 import { ServiceError, type ErrorCode } from '@shared/errors'
 import type { Db } from './db/client'
-import { createDocument, getDocumentView } from './services/documents'
+import {
+  createDocument,
+  getDocumentView,
+  listDocuments,
+  softDeleteDocument
+} from './services/documents'
 import { listDrivers, listParties, listTankers } from './services/lookups'
 import { getCustomsAgents } from './services/settings'
 import { createVessel, getActiveVessel, listVessels } from './services/vessels'
@@ -30,6 +35,7 @@ export function createHandlers(db: Db, services: Pick<Api, AsyncGroup>): Handler
   return {
     vessels: {
       listActive: () => listVessels(db, { activeOnly: true }),
+      listAll: () => listVessels(db),
       getActive: () => getActiveVessel(db),
       create: (input, { makeActive }) => createVessel(db, input, { makeActive })
     },
@@ -43,7 +49,9 @@ export function createHandlers(db: Db, services: Pick<Api, AsyncGroup>): Handler
         const { id, serialNo } = createDocument(db, input, options)
         return { id, serialNo }
       },
-      get: (id) => getDocumentView(db, documentId.parse(id))
+      get: (id) => getDocumentView(db, documentId.parse(id)),
+      list: (query) => listDocuments(db, query),
+      softDelete: (id) => softDeleteDocument(db, documentId.parse(id))
     },
     settings: {
       getCustomsAgents: () => getCustomsAgents(db)

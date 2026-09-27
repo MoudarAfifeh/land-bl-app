@@ -4,6 +4,7 @@ export const errorMessages = {
   VESSEL_INACTIVE: 'الباخرة غير نشطة ولا يمكن إصدار وثائق جديدة لها',
   PREFIX_LOCKED: 'لا يمكن تغيير حرف البوليصة بعد إصدار وثائق لهذه الباخرة',
   DOCUMENT_NOT_FOUND: 'الوثيقة غير موجودة',
+  DOCUMENT_DELETED: 'الوثيقة محذوفة ولا يمكن طباعتها أو تصديرها',
   INVALID_DATA: 'البيانات غير صالحة، يرجى مراجعة الحقول',
   PRINT_FAILED: 'تعذّرت الطباعة',
   PDF_FAILED: 'تعذّر حفظ ملف PDF',

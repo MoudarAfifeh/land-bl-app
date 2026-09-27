@@ -8,7 +8,7 @@ const LRM = '\u200E'
 const agents = { customsAgent1: 'المخلص السوري\r\nسطر ٢', customsAgent2: null }
 
 function view(overrides: Partial<DocumentView> = {}): DocumentView {
-  return { ...sampleDocument(1), id: 1, serialNo: 'A00001', ...overrides }
+  return { ...sampleDocument(1), id: 1, serialNo: 'A00001', deletedAt: null, ...overrides }
 }
 
 const valueOf = (cells: ReturnType<typeof exportCells>, key: string): unknown =>

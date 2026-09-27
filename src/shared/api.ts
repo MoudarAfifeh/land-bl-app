@@ -4,7 +4,7 @@
  */
 import type { ErrorCode } from './errors'
 import type { Driver, Party, Tanker } from './lookups'
-import type { DocumentInput, Settings, VesselInput } from './schemas'
+import type { DocumentInput, DocumentListQuery, Settings, VesselInput } from './schemas'
 
 export interface VesselSummary {
   id: number
@@ -22,8 +22,38 @@ export interface CreateDocumentOptions {
   updateDriverPassport?: boolean
 }
 
-/** A saved document as the UI reads it. `vesselId` is kept but never printed. */
-export type DocumentView = DocumentInput & { id: number; serialNo: string }
+/**
+ * A saved document as the UI reads it. `vesselId` is kept but never printed. `deletedAt` is set
+ * for a soft-deleted document, which can still be opened but not printed or exported.
+ */
+export type DocumentView = DocumentInput & {
+  id: number
+  serialNo: string
+  deletedAt: string | null
+}
+
+/** One row of the documents history. */
+export interface DocumentListRow {
+  id: number
+  serialNo: string
+  issueDate: string
+  vesselId: number
+  vesselName: string
+  vesselActive: boolean
+  shipperName: string
+  consigneeName: string
+  tankerNo: string
+  driverName: string
+  deletedAt: string | null
+}
+
+/** A page of the history, newest first. `page` is clamped to the last page. */
+export interface DocumentListPage {
+  rows: DocumentListRow[]
+  total: number
+  page: number
+  pageSize: number
+}
 
 /** File formats the document exports to, each filled from its template. */
 export type ExportFormat = 'excel' | 'word'
@@ -34,6 +64,8 @@ export type CustomsAgents = Pick<Settings, 'customsAgent1' | 'customsAgent2'>
 export interface Api {
   vessels: {
     listActive(): Promise<VesselSummary[]>
+    /** Every vessel, inactive ones too (history filter). */
+    listAll(): Promise<VesselSummary[]>
     /** The default vessel for new documents, or null. */
     getActive(): Promise<VesselSummary | null>
     create(input: VesselInput, options: { makeActive: boolean }): Promise<VesselSummary>
@@ -48,8 +80,12 @@ export interface Api {
       input: DocumentInput,
       options: CreateDocumentOptions
     ): Promise<{ id: number; serialNo: string }>
-    /** Any document, including those of inactive vessels. */
+    /** Any document, including those of inactive vessels and deleted ones. */
     get(id: number): Promise<DocumentView>
+    /** The history: search and filters, newest first, one page. */
+    list(query: DocumentListQuery): Promise<DocumentListPage>
+    /** Soft delete; the serial stays taken. Deleting twice does nothing. */
+    softDelete(id: number): Promise<void>
   }
   settings: {
     getCustomsAgents(): Promise<CustomsAgents>
@@ -72,9 +108,9 @@ export type ApiGroup = keyof Api
 
 /** Every method of the API, used by preload and main to build channels. */
 export const apiMethods = {
-  vessels: ['listActive', 'getActive', 'create'],
+  vessels: ['listActive', 'listAll', 'getActive', 'create'],
   lookups: ['listParties', 'listDrivers', 'listTankers'],
-  documents: ['create', 'get'],
+  documents: ['create', 'get', 'list', 'softDelete'],
   settings: ['getCustomsAgents'],
   print: ['print', 'savePdf'],
   export: ['excel', 'word']

@@ -1,9 +1,20 @@
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm'
 import { ServiceError } from '@shared/errors'
-import { documentInputSchema, type DocumentInput } from '@shared/schemas'
+import {
+  documentInputSchema,
+  documentListQuerySchema,
+  type DocumentInput,
+  type DocumentListQuery
+} from '@shared/schemas'
+import { escapeLike, searchText, searchTokens } from '@shared/search'
 import type { Db } from '../db/client'
 import { documents, vessels, type DocumentRow, type Vessel } from '../db/schema'
-import type { CreateDocumentOptions, DocumentView } from '@shared/api'
+import type {
+  CreateDocumentOptions,
+  DocumentListPage,
+  DocumentListRow,
+  DocumentView
+} from '@shared/api'
 import { documentInputFields } from '@shared/fields'
 import { saveDriver, saveParty, saveTanker } from './lookups'
 import { takeNextSerial } from './serial'
@@ -24,7 +35,8 @@ export function createDocument(
       const { number, serialNo } = takeNextSerial(tx, data.vesselId)
       const doc = tx
         .insert(documents)
-        .values({ ...data, number, serialNo })
+        // Documents are never edited after save, so search_text can't go stale.
+        .values({ ...data, number, serialNo, searchText: searchText({ ...data, serialNo }) })
         .returning()
         .get()
 
@@ -62,9 +74,70 @@ export function getDocument(db: Db, id: number): DocumentRow & { vessel: Vessel 
 /** A document as the UI reads it: its input fields plus id and serial. */
 export function getDocumentView(db: Db, id: number): DocumentView {
   const row = getDocument(db, id)
-  const view: Record<string, unknown> = { id: row.id, serialNo: row.serialNo }
+  const view: Record<string, unknown> = {
+    id: row.id,
+    serialNo: row.serialNo,
+    deletedAt: row.deletedAt
+  }
   for (const f of documentInputFields) view[f.key] = row[f.key]
   return view as DocumentView
+}
+
+/**
+ * A document that may be printed or exported: DOCUMENT_DELETED for a soft-deleted one. Enforced
+ * in main so hiding the buttons is not the only guard.
+ */
+export function getPrintableDocument(db: Db, id: number): DocumentRow & { vessel: Vessel } {
+  const doc = getDocument(db, id)
+  if (doc.deletedAt !== null) throw new ServiceError('DOCUMENT_DELETED')
+  return doc
+}
+
+/**
+ * The history: newest first by creation. Every word of `search` must appear in the document's
+ * serial, driver, tanker, shipper or consignee (normalised, see shared/search.ts). Documents of
+ * inactive vessels are included; deleted ones only with `includeDeleted`.
+ */
+export function listDocuments(db: Db, query: DocumentListQuery): DocumentListPage {
+  const q = documentListQuerySchema.parse(query)
+  const d = documents
+  const where: SQL[] = []
+  if (!q.includeDeleted) where.push(isNull(d.deletedAt))
+  if (q.vesselId !== null) where.push(eq(d.vesselId, q.vesselId))
+  if (q.from !== null) where.push(gte(d.issueDate, q.from))
+  if (q.to !== null) where.push(lte(d.issueDate, q.to))
+  for (const token of searchTokens(q.search)) {
+    where.push(sql`${d.searchText} LIKE ${`%${escapeLike(token)}%`} ESCAPE '!'`)
+  }
+  const condition = and(...where)
+
+  const total = db.select({ n: count() }).from(d).where(condition).get()?.n ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / q.pageSize))
+  const page = Math.min(q.page, lastPage)
+
+  const rows: DocumentListRow[] = db
+    .select({
+      id: d.id,
+      serialNo: d.serialNo,
+      issueDate: d.issueDate,
+      vesselId: d.vesselId,
+      vesselName: vessels.name,
+      vesselActive: vessels.isActive,
+      shipperName: d.shipperName,
+      consigneeName: d.consigneeName,
+      tankerNo: d.tankerNo,
+      driverName: d.driverName,
+      deletedAt: d.deletedAt
+    })
+    .from(d)
+    .innerJoin(vessels, eq(d.vesselId, vessels.id))
+    .where(condition)
+    .orderBy(desc(d.id))
+    .limit(q.pageSize)
+    .offset((page - 1) * q.pageSize)
+    .all()
+
+  return { rows, total, page, pageSize: q.pageSize }
 }
 
 /** Soft delete: the row and its serial number stay taken forever. */
