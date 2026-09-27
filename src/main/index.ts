@@ -1,8 +1,10 @@
-import { join } from 'node:path'
 import { app, BrowserWindow, dialog, session } from 'electron'
-import { is } from '@electron-toolkit/utils'
 import { closeDb, initDb } from './db'
 import { registerIpc } from './ipc'
+import { createPrintService } from './services/print'
+import { loadRenderer, lockNavigation, secureWebPreferences } from './windows'
+
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -10,19 +12,16 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
+    webPreferences: secureWebPreferences
+  })
+  mainWindow = win
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null
   })
 
   win.on('ready-to-show', () => win.show())
 
-  // Offline app: never open new windows or navigate away from the bundled UI.
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  win.webContents.on('will-navigate', (event) => event.preventDefault())
+  lockNavigation(win)
 
   // The renderer blocks unload while a form has unsaved changes; Electron shows no dialog by
   // itself, so ask here and let the window close only if the user confirms.
@@ -38,11 +37,7 @@ function createWindow(): void {
     if (choice === 0) event.preventDefault()
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  void loadRenderer(win)
 }
 
 // One instance only: a second copy would open the same SQLite file and userData folder.
@@ -50,7 +45,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    const win = BrowserWindow.getAllWindows()[0]
+    const win = mainWindow
     if (!win) return
     if (win.isMinimized()) win.restore()
     win.focus()
@@ -63,7 +58,8 @@ function start(): void {
     callback(false)
   )
   try {
-    registerIpc(initDb())
+    const db = initDb()
+    registerIpc(db, { print: createPrintService(db, () => mainWindow) })
   } catch (error) {
     dialog.showErrorBox('تعذّر فتح قاعدة البيانات', String(error))
     app.exit(1)

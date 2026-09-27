@@ -4,7 +4,7 @@
  */
 import type { ErrorCode } from './errors'
 import type { Driver, Party, Tanker } from './lookups'
-import type { DocumentInput, VesselInput } from './schemas'
+import type { DocumentInput, Settings, VesselInput } from './schemas'
 
 export interface VesselSummary {
   id: number
@@ -21,6 +21,12 @@ export interface CreateDocumentOptions {
   /** Replace the stored passport number of an existing driver with the document's. */
   updateDriverPassport?: boolean
 }
+
+/** A saved document as the UI reads it. `vesselId` is kept but never printed. */
+export type DocumentView = DocumentInput & { id: number; serialNo: string }
+
+/** The two customs agent blocks printed on every document, from settings. */
+export type CustomsAgents = Pick<Settings, 'customsAgent1' | 'customsAgent2'>
 
 export interface Api {
   vessels: {
@@ -39,6 +45,17 @@ export interface Api {
       input: DocumentInput,
       options: CreateDocumentOptions
     ): Promise<{ id: number; serialNo: string }>
+    /** Any document, including those of inactive vessels. */
+    get(id: number): Promise<DocumentView>
+  }
+  settings: {
+    getCustomsAgents(): Promise<CustomsAgents>
+  }
+  print: {
+    /** Opens the system print dialog; `printed` is false if the user cancelled. */
+    print(id: number): Promise<{ printed: boolean }>
+    /** Asks where to save, then writes the PDF; null if the user cancelled. */
+    savePdf(id: number): Promise<{ path: string } | null>
   }
 }
 
@@ -48,7 +65,9 @@ export type ApiGroup = keyof Api
 export const apiMethods = {
   vessels: ['listActive', 'getActive', 'create'],
   lookups: ['listParties', 'listDrivers', 'listTankers'],
-  documents: ['create']
+  documents: ['create', 'get'],
+  settings: ['getCustomsAgents'],
+  print: ['print', 'savePdf']
 } as const satisfies { [G in ApiGroup]: readonly (keyof Api[G])[] }
 
 export function channelOf(group: string, method: string): string {

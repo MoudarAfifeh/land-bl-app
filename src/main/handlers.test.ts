@@ -3,15 +3,26 @@ import { apiMethods } from '@shared/api'
 import { errorMessageAr } from '@shared/errors'
 import type { Db } from './db/client'
 import { openTestDb } from './db/test-db'
-import { createHandlers, toResult, type Handlers } from './handlers'
+import { createHandlers, toResult, toResultAsync, type Handlers } from './handlers'
+import { updateVessel } from './services/vessels'
 import { sampleDocument } from './services/test-fixtures'
 
 let db: Db
 let handlers: Handlers
+let printed: number[]
 
 beforeEach(() => {
   db = openTestDb()
-  handlers = createHandlers(db)
+  printed = []
+  handlers = createHandlers(db, {
+    print: {
+      print: async (id) => {
+        printed.push(id)
+        return { printed: true }
+      },
+      savePdf: async (id) => ({ path: `${id}.pdf` })
+    }
+  })
 })
 
 describe('ipc handlers', () => {
@@ -35,6 +46,37 @@ describe('ipc handlers', () => {
     const created = handlers.documents.create(sampleDocument(vessel.id), {})
     expect(created).toEqual({ id: 1, serialNo: 'A00001' })
     expect(handlers.lookups.listTankers()).toHaveLength(1)
+  })
+
+  it('reads a saved document, also after its vessel is deactivated', () => {
+    const vessel = handlers.vessels.create(
+      { name: 'MT B', prefix: 'B', arrivalDate: null, isActive: true },
+      { makeActive: true }
+    )
+    const input = sampleDocument(vessel.id, { seals: ['S1', 'S2', 'S3'] })
+    const { id } = handlers.documents.create(input, {})
+    updateVessel(db, vessel.id, { isActive: false })
+
+    expect(handlers.documents.get(id)).toEqual({ ...input, id, serialNo: 'B00001' })
+    expect(toResult(() => handlers.documents.get(999))).toEqual({
+      ok: false,
+      code: 'DOCUMENT_NOT_FOUND'
+    })
+  })
+
+  it('returns the customs agents from settings', () => {
+    const agents = handlers.settings.getCustomsAgents()
+    expect(agents.customsAgent1).toContain('معبر التنف')
+    expect(agents.customsAgent2).toContain('معبر الوليد')
+  })
+
+  it('passes valid ids to the print service and rejects others', async () => {
+    await expect(handlers.print.print(3)).resolves.toEqual({ printed: true })
+    expect(printed).toEqual([3])
+    expect(await toResultAsync(() => handlers.print.savePdf(-1))).toEqual({
+      ok: false,
+      code: 'INVALID_DATA'
+    })
   })
 })
 

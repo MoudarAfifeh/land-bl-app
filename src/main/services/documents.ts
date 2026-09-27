@@ -3,7 +3,8 @@ import { ServiceError } from '@shared/errors'
 import { documentInputSchema, type DocumentInput } from '@shared/schemas'
 import type { Db } from '../db/client'
 import { documents, vessels, type DocumentRow, type Vessel } from '../db/schema'
-import type { CreateDocumentOptions } from '@shared/api'
+import type { CreateDocumentOptions, DocumentView } from '@shared/api'
+import { documentInputFields } from '@shared/fields'
 import { saveDriver, saveParty, saveTanker } from './lookups'
 import { takeNextSerial } from './serial'
 
@@ -56,6 +57,14 @@ export function getDocument(db: Db, id: number): DocumentRow & { vessel: Vessel 
     .get()
   if (!row) throw new ServiceError('DOCUMENT_NOT_FOUND')
   return { ...row.documents, vessel: row.vessels }
+}
+
+/** A document as the UI reads it: its input fields plus id and serial. */
+export function getDocumentView(db: Db, id: number): DocumentView {
+  const row = getDocument(db, id)
+  const view: Record<string, unknown> = { id: row.id, serialNo: row.serialNo }
+  for (const f of documentInputFields) view[f.key] = row[f.key]
+  return view as DocumentView
 }
 
 /** Soft delete: the row and its serial number stay taken forever. */

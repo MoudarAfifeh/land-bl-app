@@ -5,6 +5,8 @@ export const errorMessages = {
   PREFIX_LOCKED: 'لا يمكن تغيير حرف البوليصة بعد إصدار وثائق لهذه الباخرة',
   DOCUMENT_NOT_FOUND: 'الوثيقة غير موجودة',
   INVALID_DATA: 'البيانات غير صالحة، يرجى مراجعة الحقول',
+  PRINT_FAILED: 'تعذّرت الطباعة',
+  PDF_FAILED: 'تعذّر حفظ ملف PDF',
   UNEXPECTED: 'حدث خطأ غير متوقع'
 } as const
 
