@@ -4,7 +4,7 @@
  * dialogs, restarting the app), so those services are passed in.
  */
 import { z, ZodError } from 'zod'
-import type { Api, IpcResult } from '@shared/api'
+import type { Api, IpcResult, UngatedGroup } from '@shared/api'
 import { ServiceError, type ErrorCode } from '@shared/errors'
 import type { Db } from './db/client'
 import {
@@ -32,8 +32,8 @@ type Sync<T> = {
   [M in keyof T]: T[M] extends (...args: infer A) => Promise<infer R> ? (...args: A) => R : never
 }
 
-/** Every group but `license`, which is answered by the license gate (license/gate.ts). */
-export type Handlers = { [G in Exclude<keyof Api, AsyncGroup | 'license'>]: Sync<Api[G]> } & {
+/** Every group but `license` and `app`, which the license gate answers (license/gate.ts). */
+export type Handlers = { [G in Exclude<keyof Api, AsyncGroup | UngatedGroup>]: Sync<Api[G]> } & {
   [G in AsyncGroup]: Api[G]
 }
 

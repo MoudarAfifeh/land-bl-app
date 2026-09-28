@@ -9,6 +9,7 @@ import { errorMessages } from '@shared/errors'
 import type { Db } from '../db/client'
 import { closeDb, dbFilePath, migrationsFolder } from '../db'
 import { documents } from '../db/schema'
+import { BACKUP_CONFIG_FILE } from '../user-data'
 import {
   backupStatus,
   isBackupDue,
@@ -36,7 +37,7 @@ function restart(): void {
 
 export function createBackupService(db: Db, parent: () => BrowserWindow | null): BackupService {
   const dataFolder = app.getPath('userData')
-  const configPath = join(dataFolder, 'backup.json')
+  const configPath = join(dataFolder, BACKUP_CONFIG_FILE)
   const defaultFolder = join(app.getPath('documents'), 'LandBL-Backups')
   const status = (): BackupStatus => backupStatus(configPath, defaultFolder, dataFolder, new Date())
 

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { apiMethods } from '@shared/api'
+import { apiMethods, isUngatedGroup, UNGATED_GROUPS, type Api } from '@shared/api'
 import type { Handlers } from '../handlers'
 import { encodeLicense } from './codec'
 import { createGate, type Gate } from './gate'
@@ -29,7 +29,7 @@ const license = (expiresAt: string | null = null): string =>
 function fakeHandlers(): Handlers {
   return Object.fromEntries(
     Object.entries(apiMethods)
-      .filter(([group]) => group !== 'license')
+      .filter(([group]) => !isUngatedGroup(group))
       .map(([group, methods]) => [
         group,
         Object.fromEntries(methods.map((m) => [m, () => `${group}.${m}`]))
@@ -38,7 +38,7 @@ function fakeHandlers(): Handlers {
 }
 
 const appChannels = Object.entries(apiMethods)
-  .filter(([group]) => group !== 'license')
+  .filter(([group]) => !isUngatedGroup(group))
   .flatMap(([group, methods]) => methods.map((method) => [group, method] as const))
 
 let dir: string
@@ -46,7 +46,20 @@ let now: Date
 let built: number
 let closed: number
 let copied: string[]
+let logsOpened: number
 let gate: Gate
+
+const appInfo = { version: '1.0.0', dataFolder: 'C:/data', logsFolder: 'C:/data/logs' }
+
+/** The `app` group as index.ts builds it: no database involved. */
+function appHandlers(): Api['app'] {
+  return {
+    info: async () => appInfo,
+    openLogsFolder: async () => {
+      logsOpened++
+    }
+  }
+}
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'land-bl-gate-'))
@@ -54,7 +67,9 @@ beforeEach(() => {
   built = 0
   closed = 0
   copied = []
+  logsOpened = 0
   gate = createGate({
+    app: appHandlers(),
     manager: createLicenseManager({
       dir,
       publicKey: keys.publicKey,
@@ -102,6 +117,24 @@ describe('license gate', () => {
     expect(built).toBe(0)
   })
 
+  it('answers the app handlers (version, logs folder) before activation, database closed', async () => {
+    expect(UNGATED_GROUPS).toEqual(['app', 'license'])
+    expect(await gate.dispatch('app', 'info', [])).toEqual({ ok: true, data: appInfo })
+    expect(await gate.dispatch('app', 'openLogsFolder', [])).toEqual({ ok: true, data: undefined })
+    expect(logsOpened).toBe(1)
+    expect(await gate.dispatch('app', 'drop', [])).toEqual({ ok: false, code: 'UNEXPECTED' })
+    expect(built).toBe(0)
+  })
+
+  it('still answers the app handlers once open, and after the license stops', async () => {
+    await gate.dispatch('license', 'activate', [license('2026-09-30')])
+    expect(await gate.dispatch('app', 'info', [])).toEqual({ ok: true, data: appInfo })
+    now = new Date(2026, 9, 1, 9)
+    expect(gate.refresh()).toBe(false)
+    expect(await gate.dispatch('app', 'openLogsFolder', [])).toEqual({ ok: true, data: undefined })
+    expect(logsOpened).toBe(1)
+  })
+
   it('opens on activation and builds the app handlers once', async () => {
     expect(await gate.dispatch('license', 'activate', [license()])).toMatchObject({
       ok: true,
@@ -121,6 +154,7 @@ describe('license gate', () => {
   it('opens on start when a valid license is stored', async () => {
     await gate.dispatch('license', 'activate', [license()])
     const next = createGate({
+      app: appHandlers(),
       manager: createLicenseManager({
         dir,
         publicKey: keys.publicKey,

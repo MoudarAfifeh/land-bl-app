@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router'
+import { AppInfo } from '@/components/AppInfo'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AgentsTab } from './settings/AgentsTab'
@@ -12,7 +13,8 @@ const TABS = [
   { value: 'agents', label: 'المخلّصون', Content: AgentsTab },
   { value: 'lookups', label: 'القوائم', Content: LookupsTab },
   { value: 'backup', label: 'النسخ الاحتياطي', Content: BackupTab },
-  { value: 'license', label: 'الترخيص', Content: LicenseTab }
+  { value: 'license', label: 'الترخيص', Content: LicenseTab },
+  { value: 'about', label: 'حول البرنامج', Content: AppInfo }
 ] as const
 
 type TabValue = (typeof TABS)[number]['value']

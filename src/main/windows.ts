@@ -2,6 +2,9 @@ import { join } from 'node:path'
 import type { BrowserWindow, WebPreferences } from 'electron'
 import { is } from '@electron-toolkit/utils'
 
+/** The Arabic product name, as the Start menu shows it (electron-builder.yml). */
+export const APP_TITLE = 'وثيقة نقل بري'
+
 /** Same isolation for every window that loads the UI. */
 export const secureWebPreferences: WebPreferences = {
   preload: join(__dirname, '../preload/index.js'),

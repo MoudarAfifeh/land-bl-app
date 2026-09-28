@@ -1,10 +1,11 @@
 /**
- * Every IPC call goes through here. Until a valid license is stored, only the `license` group
- * answers; everything else is refused with LICENSE_REQUIRED, and the database isn't even opened
+ * Every IPC call goes through here. Until a valid license is stored, only the `license` and `app`
+ * groups answer (UNGATED_GROUPS: activation, version, logs folder); everything else is refused with
+ * LICENSE_REQUIRED, and the database isn't even opened
  * (the app handlers are built on the first valid license). The renderer's activation screen is only
  * the visible side of this. No Electron, so the tests call it directly.
  */
-import type { Api, IpcResult } from '@shared/api'
+import { isUngatedGroup, type Api, type IpcResult } from '@shared/api'
 import { ServiceError } from '@shared/errors'
 import { toResultAsync, type Handlers } from '../handlers'
 import type { LicenseManager } from './manager'
@@ -23,6 +24,8 @@ export interface Gate {
 
 export interface GateOptions {
   manager: LicenseManager
+  /** Version and logs folder: answered before activation, must not touch the database. */
+  app: Api['app']
   /** Opens the database and services; called once, on the first valid license. */
   buildHandlers: () => Handlers
   copyText: (text: string) => void
@@ -70,7 +73,8 @@ export function createGate(options: GateOptions): Gate {
     dispatch: (group, method, args) =>
       toResultAsync(() => {
         let table: MethodTable[string] | undefined
-        if (group === 'license') table = license as unknown as MethodTable[string]
+        const ungated: Pick<Api, 'app' | 'license'> = { app: options.app, license }
+        if (isUngatedGroup(group)) table = ungated[group] as unknown as MethodTable[string]
         else if (open && handlers) table = (handlers as unknown as MethodTable)[group]
         else throw new ServiceError('LICENSE_REQUIRED')
         const handler = table && Object.hasOwn(table, method) ? table[method] : undefined

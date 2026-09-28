@@ -135,7 +135,21 @@ export interface LicenseStatus {
   daysLeft: number | null
 }
 
+/** Shown in Settings and on the activation screen, for support. */
+export interface AppInfo {
+  version: string
+  /** userData: database, license, backup settings. */
+  dataFolder: string
+  logsFolder: string
+}
+
 export interface Api {
+  /** Answered before activation too (license/gate.ts): nothing here opens the database. */
+  app: {
+    info(): Promise<AppInfo>
+    /** Opens the logs folder in Explorer, so the client can send the log files. */
+    openLogsFolder(): Promise<void>
+  }
   license: {
     /** Checks the stored license again (expiry, clock) and returns it. */
     status(): Promise<LicenseStatus>
@@ -220,8 +234,20 @@ export interface Api {
 
 export type ApiGroup = keyof Api
 
+/**
+ * Groups the license gate answers before activation. Everything else is refused with
+ * LICENSE_REQUIRED and the database stays closed.
+ */
+export const UNGATED_GROUPS = ['app', 'license'] as const satisfies readonly ApiGroup[]
+export type UngatedGroup = (typeof UNGATED_GROUPS)[number]
+
+export function isUngatedGroup(group: string): group is UngatedGroup {
+  return (UNGATED_GROUPS as readonly string[]).includes(group)
+}
+
 /** Every method of the API, used by preload and main to build channels. */
 export const apiMethods = {
+  app: ['info', 'openLogsFolder'],
   license: ['status', 'activate', 'copyMachineCode'],
   vessels: [
     'listActive',

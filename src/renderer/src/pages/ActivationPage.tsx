@@ -1,6 +1,7 @@
 import type { LicenseStatus } from '@shared/api'
 import { errorMessages } from '@shared/errors'
 import { isoToDisplay } from '@/lib/format'
+import { AppInfo } from '@/components/AppInfo'
 import { LicenseForm, MachineCode } from '@/components/license/LicenseParts'
 import { Notice } from '@/components/Notice'
 
@@ -50,6 +51,8 @@ function ActivationPage({
           </section>
         </>
       )}
+
+      <AppInfo compact />
     </main>
   )
 }

@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { app } from 'electron'
+import { DB_FILE } from '../user-data'
 import { openDb, type Db } from './client'
 
 let db: Db | null = null
@@ -13,7 +14,7 @@ export function migrationsFolder(): string {
 
 /** The database file in userData. Replaced as a whole by a restore (services/restore.ts). */
 export function dbFilePath(): string {
-  return join(app.getPath('userData'), 'land-bl.sqlite')
+  return join(app.getPath('userData'), DB_FILE)
 }
 
 /** Opens the app database in userData and applies pending migrations. Call once on startup. */

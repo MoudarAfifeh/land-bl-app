@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { apiMethods, type BackupStatus } from '@shared/api'
+import { apiMethods, isUngatedGroup, type BackupStatus } from '@shared/api'
 import { errorMessageAr } from '@shared/errors'
 import type { Db } from './db/client'
 import { openTestDb } from './db/test-db'
@@ -58,9 +58,9 @@ beforeEach(() => {
 })
 
 describe('ipc handlers', () => {
-  it('has a handler for every api method but the license ones (license/gate.ts)', () => {
+  it('has a handler for every api method but the ungated ones (license/gate.ts)', () => {
     for (const [group, methods] of Object.entries(apiMethods)) {
-      if (group === 'license') continue
+      if (isUngatedGroup(group)) continue
       for (const method of methods) {
         const groupHandlers = handlers[group as keyof Handlers] as Record<string, unknown>
         expect(typeof groupHandlers[method], `${group}.${method}`).toBe('function')

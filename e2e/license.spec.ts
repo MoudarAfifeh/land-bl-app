@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test'
@@ -59,6 +59,25 @@ test('without a license only activation works; a valid one opens the app', async
     return codes
   })
   expect(refused).toEqual(Array(4).fill('LICENSE_REQUIRED'))
+  expect(existsSync(join(userData, 'land-bl.sqlite'))).toBe(false)
+
+  // Version and logs folder answer before activation, still without the database.
+  await expect(page.getByTestId('app-version')).toHaveText(
+    await app.evaluate(({ app }) => app.getVersion())
+  )
+  await app.evaluate(({ shell }) => {
+    const g = globalThis as unknown as { opened: string[] }
+    g.opened = []
+    shell.openPath = (async (path: string) => {
+      g.opened.push(path)
+      return ''
+    }) as never
+  })
+  await page.getByTestId('open-logs').click()
+  await expect
+    .poll(() => app.evaluate(() => (globalThis as unknown as { opened: string[] }).opened))
+    .toEqual([join(userData, 'logs')])
+  expect(readFileSync(join(userData, 'logs', 'main.log'), 'utf8')).toMatch(/ INFO Started /)
   expect(existsSync(join(userData, 'land-bl.sqlite'))).toBe(false)
 
   // No route leads past the activation screen.
