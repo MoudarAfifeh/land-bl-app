@@ -59,6 +59,22 @@ Follow `docs/PLAN.md` phase by phase.
   newer app version), migrates the copy, writes a safety backup, then swaps the DB file and restarts.
   `LAND_BL_NO_RELAUNCH=1` makes it exit without relaunching (e2e only).
 
+## Licensing
+
+See `docs/LICENSING.md`. Ed25519, offline, one license per PC (hash of the Windows MachineGuid).
+- Checked in main before anything else (`src/main/index.ts`). Every IPC call goes through the gate
+  (`license/gate.ts`): until the license is valid, only `license.*` answers, the rest returns
+  `LICENSE_REQUIRED`, and the DB is not opened. A new IPC group needs nothing extra, but never
+  register an `ipcMain` handler outside `registerIpc`.
+- `userData/license.lic` and `license-state.json` (latest date seen) sit outside the DB: backup and
+  restore never touch them. Clock more than 2 days behind that date, or the issue date: refused.
+- Only the public key is in the app, compiled in by `electron.vite.config.ts`: the production key
+  (`src/main/license/production-public-key.pem`), or the committed test key with `--mode e2e`.
+  `build:win` refuses a build carrying the test key. The private key never enters the repo.
+- `src/main/license/codec.ts` has no imports but `node:crypto`: the generator
+  (`tools/license-generator`, Node type stripping) runs the same file. Keep it that way.
+- e2e specs write a test license before launch (`installTestLicense` in `e2e/license.ts`).
+
 ## Architecture
 
 ```
@@ -69,11 +85,14 @@ src/
                backup.ts, restore.ts, backup-service.ts (Electron: dialogs, schedule, restart),
                export.ts (build), export-data.ts, export-excel.ts, export-word.ts,
                export-dialog.ts + save-file.ts (Electron: save dialog, write)
-    ipc.ts     one handler per service method
+    license/   codec.ts (sign/verify), machine-id.ts, manager.ts (files), gate.ts (IPC gate),
+               public-key.ts (build-time key)
+    ipc.ts     one handler per service method, all through the license gate
   preload/     contextBridge exposing a typed `window.api`
   renderer/    React UI only. No Node, no fs, no DB access.
   shared/      fields.ts (from field-map.md), types, Zod schemas, IPC contract types
 templates/     land-bl.xlsx, land-bl.docx (bundled as extraResources)
+tools/         license-generator (developer only, never packaged)
 ```
 
 Rules:
@@ -137,7 +156,8 @@ npm test           # vitest
 npm run test:e2e   # playwright electron smoke test
 npm run db:generate   # new migration after editing src/main/db/schema.ts
 npm run check:native  # load better-sqlite3 inside Electron
-npm run build:win  # NSIS installer
+npm run build:win  # NSIS installer (checks the production license key first)
+npm run license -- keygen|issue|inspect  # license generator, see docs/LICENSING.md
 ```
 
 ## How to work

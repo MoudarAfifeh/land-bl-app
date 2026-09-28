@@ -101,12 +101,34 @@ Decided in Phase 6:
 
 Done when: restore from a backup brings back all documents and the next serial continues correctly.
 
+## Phase 6.5 — Licensing
+
+Prompt: offline license activation before packaging (Ed25519, machine code from the MachineGuid,
+activation screen, enforced in main, stored outside the DB, 30-day expiry warning, clock rollback
+detection, a generator CLI kept out of the app). Details in `docs/LICENSING.md`.
+
+Decided in Phase 6.5:
+- The public key is chosen at build time: production key normally, the committed test key with
+  `--mode e2e`. `build:win` refuses to package a build carrying the test key.
+- Machine code: 16 hex characters in groups of 4, no checksum (copied, not typed).
+- The generator logs every license to `issued-licenses.csv` next to the private key (issued date,
+  customer, machine code, expiry, note); both are backed up together.
+- A renewal is pasted in Settings; a refused one leaves the current license in place.
+- Accepted limits: the JavaScript can be patched, and deleting the state file resets the rollback
+  check (the issue date remains a floor).
+
+Done when: without a license only the activation screen works and main refuses every other call;
+a license from the generator activates the app.
+
 ## Phase 7 — Packaging
 
 Prompt:
 > Configure electron-builder for a Windows NSIS installer with app name, icon and Arabic product name.
 > Make sure better-sqlite3 is rebuilt for Electron and templates are included. Add a Playwright
 > smoke test: open app, create a document, export both files.
+
+The packaged smoke test activates first with a test license (`e2e/license.ts`); that installer is
+built with `--mode e2e` into its own output folder, never shipped.
 
 Done when: the installer works on a clean Windows machine with no internet.
 
