@@ -1,15 +1,15 @@
 // Makes the app icon from the UCC logo: the UCC mark alone (the full logo's text is unreadable at
 // 16–32 px), centred on a square white tile. Run once when the logo changes, then commit the output:
 //
-//   npx electron scripts/make-icon.cjs
+//   npx electron scripts/make-icon.mjs
 //
 // Writes resources/icon.png (512 px, for electron-builder) and resources/icon.ico (16–256 px).
 // Runs inside Electron for nativeImage (decode, crop, resize), so no image library is needed.
-const { writeFileSync } = require('node:fs')
-const { join } = require('node:path')
-const { app, nativeImage } = require('electron')
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { app, nativeImage } from 'electron'
 
-const ROOT = join(__dirname, '..')
+const ROOT = join(import.meta.dirname, '..')
 const LOGO = join(ROOT, 'src/renderer/src/assets/logo.jpeg')
 /** Rows of the logo holding the UCC mark: below the olive banner, above "SUPPLY & TRADING". */
 const MARK_ROWS = [90, 222]

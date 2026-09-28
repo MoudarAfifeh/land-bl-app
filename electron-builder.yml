@@ -1,6 +1,12 @@
-# Phase 0: only what's needed to ship templates. NSIS/installer config comes in Phase 7.
+# Windows installer (docs/RELEASE.md). Build with `npm run build:win`, never by calling
+# electron-builder directly: the script runs the license key, native module and offline checks first.
 appId: com.landbl.app
-productName: Land BL
+# What people see: Start menu and desktop shortcuts, Apps & features, Task Manager.
+productName: وثيقة نقل بري
+# ASCII names for files and folders: land-bl.exe, %LOCALAPPDATA%\Programs\land-bl (from the
+# package name), land-bl-setup-1.0.0.exe. The data folder is %APPDATA%\land-bl (src/main/user-data.ts).
+executableName: land-bl
+copyright: Copyright © 2026 Moudar Afifeh
 directories:
   buildResources: resources
   output: dist
@@ -10,10 +16,24 @@ files:
   # The license generator and its keys are for the developer only (docs/LICENSING.md).
   - '!tools/**'
   - '!**/*.pem'
+  - '!**/*.lic'
   - '!**/issued-licenses.csv'
-# better-sqlite3 ships N-API prebuilds (ABI-stable across Node and Electron), so nothing needs
-# rebuilding; a node-gyp rebuild would also require Python + MSVC. Verify with `npm run check:native`.
+  # better-sqlite3: only the Windows x64 prebuild, not its C sources or other platforms' builds.
+  - '!node_modules/better-sqlite3/{deps,src}/**'
+  - '!node_modules/better-sqlite3/binding.gyp'
+  - '!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'
+  - '!node_modules/better-sqlite3/prebuilds/win32-arm64.node'
+# better-sqlite3 ships N-API prebuilds (ABI-stable across Node and Electron versions), so nothing is
+# rebuilt; a node-gyp rebuild would also require Python + MSVC. `build:win` runs `check:native`, and
+# the packaged smoke test (npm run test:packaged) opens the database inside the packaged app.
 npmRebuild: false
+# Chromium's own UI strings (print dialog, context menus): Arabic, and English as a fallback.
+electronLanguages:
+  - ar
+  - en-US
+# A native module can't be loaded from inside app.asar.
+asarUnpack:
+  - node_modules/better-sqlite3/prebuilds/*.node
 extraResources:
   - from: templates/
     to: templates/
@@ -23,3 +43,34 @@ extraResources:
     to: migrations/
     filter:
       - '**/*'
+# Checks the packaged files (scripts/after-pack.mjs): no keys or tools, resources present, offline.
+afterPack: scripts/after-pack.mjs
+# No auto-update: no app-update.yml, no update server. Updates ship as a new installer.
+publish: null
+win:
+  target:
+    - target: nsis
+      arch: x64
+  icon: icon.ico
+nsis:
+  # Per user, no admin rights, no wizard: installs, creates the shortcuts and starts the app.
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  runAfterFinish: true
+  # Uninstalling keeps userData (database, license, backup settings, logs). Backups live in the
+  # folder the user chose. Only `Uninstall land-bl.exe --delete-app-data` would remove userData.
+  deleteAppDataOnUninstall: false
+  # Only admin (per-machine) installs need it.
+  packElevateHelper: false
+  uninstallDisplayName: ${productName}
+  installerIcon: icon.ico
+  uninstallerIcon: icon.ico
+  # Arabic installer messages.
+  installerLanguages:
+    - ar_SA
+  language: '1025'
+  artifactName: land-bl-setup-${version}.${ext}
+  # The .blockmap only serves differential auto-updates, which the app doesn't have.
+  differentialPackage: false

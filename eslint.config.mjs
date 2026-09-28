@@ -6,7 +6,7 @@ import prettier from 'eslint-config-prettier'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['out/**', 'dist/**', 'node_modules/**'] },
+  { ignores: ['out/**', 'dist/**', 'dist-e2e/**', 'node_modules/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -15,6 +15,7 @@ export default tseslint.config(
       'src/preload/**/*.ts',
       'scripts/**/*.mjs',
       'e2e/**/*.ts',
+      'e2e-packaged/**/*.ts',
       'tools/**/*.ts',
       '*.config.ts',
       '*.config.mjs'
