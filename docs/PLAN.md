@@ -130,6 +130,19 @@ Prompt:
 The packaged smoke test activates first with a test license (`e2e/license.ts`); that installer is
 built with `--mode e2e` into its own output folder, never shipped.
 
+Decided in Phase 7:
+- Installer: one-click, per user (no admin), x64. Product name «وثيقة نقل بري» (shortcuts, Apps list,
+  Task Manager); ASCII `land-bl.exe`, `%LOCALAPPDATA%\Programs\land-bl`, `land-bl-setup-<version>.exe`.
+  Uninstall keeps userData. Version starts at 1.0.0 (Settings → حول البرنامج).
+- userData pinned to `%APPDATA%\land-bl`; pre-1.0 `land-bl-app` is copied once (never moved), the copy
+  logged, retried if it fails half way.
+- Icon: the UCC mark alone on a white square (the full logo is unreadable at 16–32 px).
+- better-sqlite3 is not rebuilt (N-API prebuild); `check:native` and the packaged smoke test prove it.
+- The license gate also answers `app.*` (version, open logs folder) before activation, DB closed.
+- Offline: strict CSP, main-side request block, minified renderer, URL allowlist check at build and
+  after packaging. Renderer-only packages moved to devDependencies (app.asar 74 → 22 MB).
+- Code signing: not now (options in `docs/RELEASE.md`).
+
 Done when: the installer works on a clean Windows machine with no internet.
 
 ## Later

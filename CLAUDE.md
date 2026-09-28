@@ -10,10 +10,16 @@ Follow `docs/PLAN.md` phase by phase.
 ## Hard constraints
 
 - **Fully offline.** No network calls at runtime, no CDNs, no Google Fonts, no telemetry, no auto-update.
-  Fonts and all assets are bundled locally.
-- **Single device for now.** SQLite file in `app.getPath('userData')`. Multi-device comes later,
+  Fonts and all assets are bundled locally. Enforced three ways: the renderer CSP (`connect-src 'none'`
+  etc., relaxed only for `npm run dev`), main cancelling any request that isn't `file:`/`data:`/`blob:`
+  (`blockRemoteRequests` in `windows.ts`), and `scripts/check-offline.mjs` at build time (a URL string
+  in the renderer must be on its reviewed list, none in main or preload).
+- **Single device for now.** SQLite file in `app.getPath('userData')`, which is set explicitly to
+  `%APPDATA%\land-bl` (`user-data.ts`), not derived from the app name. Pre-1.0 data in `land-bl-app` is
+  copied once, the old folder left untouched. Multi-device comes later,
   so keep serial generation isolated (see below).
-- **Windows only.** Package with electron-builder (NSIS installer). Updates ship as a new installer.
+- **Windows only.** Package with electron-builder (one-click per-user NSIS, `electron-builder.yml`),
+  only through `npm run build:win`. Updates ship as a new installer. See `docs/RELEASE.md`.
 - **Arabic RTL UI.** `<html dir="rtl" lang="ar">`. Labels come from `field-map.md` (Arabic first, English second).
 - **Templates are read-only.** Never modify files in `templates/` at runtime. Load, fill a copy, save the copy.
 
@@ -29,6 +35,7 @@ Follow `docs/PLAN.md` phase by phase.
 - DB: better-sqlite3 + Drizzle ORM (migrations in `src/main/db/migrations`, generated with
   `npm run db:generate`, applied automatically on app start, shipped as extraResources).
   better-sqlite3 uses N-API prebuilds: no node-gyp rebuild for Electron. Check with `npm run check:native`.
+  Packaged: only `prebuilds/win32-x64.node`, unpacked from the asar.
 - Excel: pizzip, editing `xl/worksheets/sheet1.xml` of `templates/land-bl.xlsx` directly
   (`services/export-excel.ts`). Not ExcelJS: it can't load this template (unprefixed drawing XML)
   and rounds 9.5 / 7.1 pt fonts. Text and dates are inline strings, numbers `<v>`, each cell keeps
@@ -46,6 +53,14 @@ Follow `docs/PLAN.md` phase by phase.
   checking the Word template.
 - Tests: Vitest (unit), Playwright for Electron (smoke). In unit tests `electron` is aliased to
   `src/main/test-electron.ts`, a stub that throws if a window or dialog is opened.
+  `npm run test:packaged` runs `e2e-packaged/` against the exe built with the test key into `dist-e2e/`.
+- Packaging: `dependencies` holds only what main loads at runtime (better-sqlite3, drizzle-orm,
+  docxtemplater, pizzip, zod, @electron-toolkit/utils); everything the renderer uses is bundled by Vite
+  and goes in `devDependencies`, or it ships twice in app.asar. `scripts/after-pack.mjs` fails the
+  build on developer files, keys or licenses in app.asar, missing templates/migrations/native module,
+  the offline check, or the test key outside a `--dir` build into `dist-e2e`.
+- Log: `log.ts`, `userData/logs/main.log` (1 MB × 3). main's `console.error`/`warn`, uncaught errors
+  and renderer crashes / console errors land there. Errors only: never log document contents.
 - History search: `search_text` column (normalised by `shared/search.ts`), `LIKE … ESCAPE '!'`.
 - Lookups (parties, drivers, tankers): an exact duplicate (`nameKey`: case and spaces ignored) is
   refused with `LOOKUP_DUPLICATE`; a spelling variant (`findSimilar`, same folding as the search) is
@@ -63,8 +78,9 @@ Follow `docs/PLAN.md` phase by phase.
 
 See `docs/LICENSING.md`. Ed25519, offline, one license per PC (hash of the Windows MachineGuid).
 - Checked in main before anything else (`src/main/index.ts`). Every IPC call goes through the gate
-  (`license/gate.ts`): until the license is valid, only `license.*` answers, the rest returns
-  `LICENSE_REQUIRED`, and the DB is not opened. A new IPC group needs nothing extra, but never
+  (`license/gate.ts`): until the license is valid, only `license.*` and `app.*` (version, logs
+  folder: `UNGATED_GROUPS` in `shared/api.ts`) answer, the rest returns `LICENSE_REQUIRED`, and the DB
+  is not opened. Nothing in an ungated group may touch the DB. A new IPC group needs nothing extra, but never
   register an `ipcMain` handler outside `registerIpc`.
 - `userData/license.lic` and `license-state.json` (latest date seen) sit outside the DB: backup and
   restore never touch them. Clock more than 2 days behind that date, or the issue date: refused.
@@ -88,11 +104,16 @@ src/
     license/   codec.ts (sign/verify), machine-id.ts, manager.ts (files), gate.ts (IPC gate),
                public-key.ts (build-time key)
     ipc.ts     one handler per service method, all through the license gate
+    log.ts     rotating log file; user-data.ts: data folder and the pre-1.0 copy
+    windows.ts window security, navigation lock, remote request block
   preload/     contextBridge exposing a typed `window.api`
   renderer/    React UI only. No Node, no fs, no DB access.
   shared/      fields.ts (from field-map.md), types, Zod schemas, IPC contract types
 templates/     land-bl.xlsx, land-bl.docx (bundled as extraResources)
 tools/         license-generator (developer only, never packaged)
+scripts/       build checks (native, license key, offline, after-pack), make-icon.mjs
+resources/     icon.ico / icon.png (from the UCC logo, `npx electron scripts/make-icon.mjs`)
+e2e-packaged/  smoke test of the packaged exe
 ```
 
 Rules:
@@ -156,7 +177,8 @@ npm test           # vitest
 npm run test:e2e   # playwright electron smoke test
 npm run db:generate   # new migration after editing src/main/db/schema.ts
 npm run check:native  # load better-sqlite3 inside Electron
-npm run build:win  # NSIS installer (checks the production license key first)
+npm run build:win  # NSIS installer: native, license key and offline checks first (docs/RELEASE.md)
+npm run test:packaged  # package with the test key into dist-e2e/ and smoke-test the exe
 npm run license -- keygen|issue|inspect  # license generator, see docs/LICENSING.md
 ```
 

@@ -123,7 +123,11 @@ If the app cannot read the `MachineGuid` at all, the activation screen says so a
 - `npm run dev` uses the production key too: issue yourself a license for your development PC
   like for any client (e.g. `--customer "Dev PC"`).
 - The generator (`tools/license-generator/`) is never packaged: `electron-builder.yml` only takes
-  `out/**` and excludes `tools/**`, `*.pem` and `issued-licenses.csv` explicitly.
+  `out/**` and excludes `tools/**`, `*.pem`, `*.lic` and `issued-licenses.csv` explicitly, and
+  `scripts/after-pack.mjs` checks the packaged app.asar for them (and for the test key) before the
+  installer is made.
+- `npm run test:packaged` packages a test-key build into `dist-e2e/` (unpacked, never an installer):
+  after-pack refuses the test key anywhere else.
 
 ## Limits
 
