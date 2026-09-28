@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router'
 import type { LicenseStatus } from '@shared/api'
 import { router } from './App'
 import ActivationPage from './pages/ActivationPage'
+import { AppLayout } from './components/DeveloperCredit'
 
 const unreadable: LicenseStatus = {
   active: false,
@@ -28,14 +29,16 @@ function Root(): React.JSX.Element | null {
   if (!status) return null
   if (!status.active)
     return (
-      <ActivationPage
-        status={status}
-        onActivated={(next) => {
-          // Start the app from the home page (main has opened the database).
-          void router.navigate('/', { replace: true })
-          setStatus(next)
-        }}
-      />
+      <AppLayout>
+        <ActivationPage
+          status={status}
+          onActivated={(next) => {
+            // Start the app from the home page (main has opened the database).
+            void router.navigate('/', { replace: true })
+            setStatus(next)
+          }}
+        />
+      </AppLayout>
     )
   return <RouterProvider router={router} />
 }

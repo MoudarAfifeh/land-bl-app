@@ -29,6 +29,17 @@ beforeEach(() => {
 })
 
 describe('buildExport', () => {
+  it('never puts the developer credit in the Excel or Word file', async () => {
+    const { id } = createDocument(db, { ...longDocument, vesselId }, {})
+    for (const format of ['excel', 'word'] as const) {
+      const { data } = await buildExport(db, id, format, templatesDir)
+      for (const file of Object.values(new PizZip(data).files)) {
+        if (file.dir) continue
+        expect(file.asText(), `${format}: ${file.name}`).not.toMatch(/moudarAf|31684908217/i)
+      }
+    }
+  })
+
   it('fills the Excel template from the saved document and its agent blocks', async () => {
     setSetting(db, 'customsAgent2', 'وكيل جديد\nسطر ثاني')
     const { id } = createDocument(db, { ...longDocument, vesselId }, {})

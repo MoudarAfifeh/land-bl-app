@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
 import type { AppInfo as Info } from '@shared/api'
+import { DEVELOPER } from '@/lib/developer'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -67,6 +68,16 @@ export function AppInfo({ compact = false }: { compact?: boolean }): React.JSX.E
         <dd>
           <bdi dir="ltr" data-testid="app-version">
             {info?.version}
+          </bdi>
+        </dd>
+        <dt className="text-muted-foreground">التطوير</dt>
+        <dd>
+          <bdi dir="ltr">{DEVELOPER.name}</bdi>
+        </dd>
+        <dt className="text-muted-foreground">واتساب</dt>
+        <dd>
+          <bdi dir="ltr" className="select-all" data-testid="developer-whatsapp">
+            {DEVELOPER.whatsApp}
           </bdi>
         </dd>
         <dt className="text-muted-foreground">مجلد البيانات</dt>

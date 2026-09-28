@@ -64,4 +64,8 @@ test('a document with 12 seals and long names prints on exactly one A4 page', as
   expect(await page.evaluate(() => document.body.dataset.printOverflow)).toBe('0')
   await expect(page.locator('.ps-sheet')).toContainText('T00001')
   await expect(page.locator('.ps-sheet')).toContainText('SEAL-2026-1000011')
+
+  // The developer credit is on every screen but never on what gets printed or saved as PDF.
+  expect(await page.evaluate(() => document.body.innerText)).not.toContain('moudarAf')
+  await expect(page.getByTestId('developer-credit')).toHaveCount(0)
 })
