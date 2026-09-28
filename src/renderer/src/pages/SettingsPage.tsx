@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AgentsTab } from './settings/AgentsTab'
 import { BackupTab } from './settings/BackupTab'
+import { LicenseTab } from './settings/LicenseTab'
 import { LookupsTab } from './settings/LookupsTab'
 import { VesselsTab } from './settings/VesselsTab'
 
@@ -10,7 +11,8 @@ const TABS = [
   { value: 'vessels', label: 'البواخر', Content: VesselsTab },
   { value: 'agents', label: 'المخلّصون', Content: AgentsTab },
   { value: 'lookups', label: 'القوائم', Content: LookupsTab },
-  { value: 'backup', label: 'النسخ الاحتياطي', Content: BackupTab }
+  { value: 'backup', label: 'النسخ الاحتياطي', Content: BackupTab },
+  { value: 'license', label: 'الترخيص', Content: LicenseTab }
 ] as const
 
 type TabValue = (typeof TABS)[number]['value']

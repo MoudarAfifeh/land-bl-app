@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import type { BackupStatus } from '@shared/api'
+import type { BackupStatus, LicenseStatus } from '@shared/api'
 import { errorMessages } from '@shared/errors'
 import { BackupAgeNotice } from '@/components/BackupAgeNotice'
+import { LicenseExpiryNotice } from '@/components/LicenseExpiryNotice'
 import { Notice } from '@/components/Notice'
 import { Button } from '@/components/ui/button'
 
@@ -43,6 +44,29 @@ function BackupBanner(): React.JSX.Element | null {
   return null
 }
 
+/** 30 days before the license ends, so it is renewed before the app stops. */
+function LicenseBanner(): React.JSX.Element | null {
+  const [status, setStatus] = useState<LicenseStatus | null>(null)
+
+  useEffect(() => {
+    window.api.license.status().then(setStatus, () => undefined)
+  }, [])
+
+  if (!status) return null
+  return (
+    <LicenseExpiryNotice
+      status={status}
+      action={
+        <div>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/settings?tab=license">الترخيص</Link>
+          </Button>
+        </div>
+      }
+    />
+  )
+}
+
 function HomePage(): React.JSX.Element {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 p-8">
@@ -61,6 +85,7 @@ function HomePage(): React.JSX.Element {
           <Link to="/settings">الإعدادات</Link>
         </Button>
       </div>
+      <LicenseBanner />
       <BackupBanner />
     </main>
   )
