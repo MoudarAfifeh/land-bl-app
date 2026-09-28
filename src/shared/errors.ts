@@ -21,6 +21,14 @@ export const errorMessages = {
   EXCEL_FAILED: 'تعذّر تصدير ملف Excel',
   WORD_FAILED: 'تعذّر تصدير ملف Word',
   FILE_IN_USE: 'الملف مفتوح في برنامج آخر، أغلقه ثم أعد المحاولة',
+  LICENSE_REQUIRED: 'البرنامج غير مفعّل. أدخل الترخيص للمتابعة',
+  LICENSE_INVALID: 'نص الترخيص غير صالح. انسخ الترخيص كاملًا كما وصلك، من سطر BEGIN إلى سطر END',
+  LICENSE_WRONG_MACHINE:
+    'هذا الترخيص صادر لجهاز آخر. أرسل رمز هذا الجهاز إلى المزوّد للحصول على ترخيص له',
+  LICENSE_EXPIRED: 'انتهت صلاحية الترخيص. تواصل مع المزوّد لتجديده',
+  LICENSE_CLOCK_ROLLBACK:
+    'تاريخ الجهاز أقدم من آخر تاريخ استُخدم فيه البرنامج. صحّح التاريخ والوقت في Windows ثم أعد المحاولة',
+  LICENSE_MACHINE_ID_UNAVAILABLE: 'تعذّرت قراءة معرّف هذا الجهاز، فلا يمكن التفعيل عليه',
   UNEXPECTED: 'حدث خطأ غير متوقع'
 } as const
 

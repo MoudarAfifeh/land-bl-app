@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdtempSync,
   openSync,
+  readFileSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -20,6 +21,7 @@ import { ServiceError } from '@shared/errors'
 import { openDb, type Db } from '../db/client'
 import { documents } from '../db/schema'
 import { MIGRATIONS, migrationsUpTo } from '../db/test-db'
+import { LICENSE_FILE, LICENSE_STATE_FILE } from '../license/manager'
 import { writeBackup } from './backup'
 import { createDocument, getDocumentView, softDeleteDocument } from './documents'
 import { prepareRestore, replaceDatabase, restoreDatabase } from './restore'
@@ -248,6 +250,15 @@ describe('restoreDatabase', () => {
     expect(getDocumentView(restored, doc.id).deletedAt).toBeNull()
     expect(add(restored, vesselA).serialNo).toBe('A00002')
     restored.$client.close()
+  })
+
+  it('leaves the license files next to the database alone', async () => {
+    const file = await backup()
+    writeFileSync(join(dir, LICENSE_FILE), 'license text')
+    writeFileSync(join(dir, LICENSE_STATE_FILE), '{"lastSeen":"2026-09-27T12:00:00.000Z"}')
+    await restoreDatabase(options({ file }))
+    expect(readFileSync(join(dir, LICENSE_FILE), 'utf8')).toBe('license text')
+    expect(readFileSync(join(dir, LICENSE_STATE_FILE), 'utf8')).toContain('2026-09-27')
   })
 
   it('writes a safety backup of the current data before replacing it', async () => {

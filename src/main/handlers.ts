@@ -32,7 +32,8 @@ type Sync<T> = {
   [M in keyof T]: T[M] extends (...args: infer A) => Promise<infer R> ? (...args: A) => R : never
 }
 
-export type Handlers = { [G in Exclude<keyof Api, AsyncGroup>]: Sync<Api[G]> } & {
+/** Every group but `license`, which is answered by the license gate (license/gate.ts). */
+export type Handlers = { [G in Exclude<keyof Api, AsyncGroup | 'license'>]: Sync<Api[G]> } & {
   [G in AsyncGroup]: Api[G]
 }
 

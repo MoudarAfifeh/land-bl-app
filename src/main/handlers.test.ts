@@ -58,8 +58,9 @@ beforeEach(() => {
 })
 
 describe('ipc handlers', () => {
-  it('has a handler for every api method', () => {
+  it('has a handler for every api method but the license ones (license/gate.ts)', () => {
     for (const [group, methods] of Object.entries(apiMethods)) {
+      if (group === 'license') continue
       for (const method of methods) {
         const groupHandlers = handlers[group as keyof Handlers] as Record<string, unknown>
         expect(typeof groupHandlers[method], `${group}.${method}`).toBe('function')

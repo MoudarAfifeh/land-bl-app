@@ -12,9 +12,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:e2e": "electron-vite build && playwright test",
+    "test:e2e": "electron-vite build --mode e2e && playwright test",
     "check:native": "node scripts/check-native.mjs",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "license": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/license-generator/cli.ts",
+    "build:win": "electron-vite build && node scripts/check-license-key.mjs && electron-builder --win"
   },
   "dependencies": {
     "@electron-toolkit/utils": "4.0.0",

@@ -113,7 +113,40 @@ export interface RestorePreview {
   lostVessels: { name: string; prefix: string; lastSerial: string | null }[]
 }
 
+/** The home page warns this many days (or fewer) before the license expires. */
+export const LICENSE_WARNING_DAYS = 30
+
+/**
+ * The license as the activation screen and Settings show it. Without an active license, main
+ * refuses every other call with LICENSE_REQUIRED.
+ */
+export interface LicenseStatus {
+  active: boolean
+  /** Why it isn't active; null when active, or when no license was ever entered. */
+  error: ErrorCode | null
+  /** This PC's code (7F3A-92C1-0B4E-D8A5) to send for a license; null if it can't be read. */
+  machineCode: string | null
+  /** From the stored license (also shown when it expired), otherwise null. */
+  customerName: string | null
+  issuedAt: string | null
+  /** Null: never expires. */
+  expiresAt: string | null
+  /** Whole days to the expiry date, 0 on the last day; null without an expiry. */
+  daysLeft: number | null
+}
+
 export interface Api {
+  license: {
+    /** Checks the stored license again (expiry, clock) and returns it. */
+    status(): Promise<LicenseStatus>
+    /**
+     * Verifies a pasted license and stores it (also to renew). A refused one leaves the stored
+     * license unchanged and rejects with its error code.
+     */
+    activate(text: string): Promise<LicenseStatus>
+    /** Copies the machine code to the clipboard. */
+    copyMachineCode(): Promise<void>
+  }
   vessels: {
     listActive(): Promise<VesselSummary[]>
     /** Every vessel, inactive ones too (history filter). */
@@ -189,6 +222,7 @@ export type ApiGroup = keyof Api
 
 /** Every method of the API, used by preload and main to build channels. */
 export const apiMethods = {
+  license: ['status', 'activate', 'copyMachineCode'],
   vessels: [
     'listActive',
     'listAll',
