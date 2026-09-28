@@ -7,6 +7,10 @@ directories:
 files:
   - out/**
   - package.json
+  # The license generator and its keys are for the developer only (docs/LICENSING.md).
+  - '!tools/**'
+  - '!**/*.pem'
+  - '!**/issued-licenses.csv'
 # better-sqlite3 ships N-API prebuilds (ABI-stable across Node and Electron), so nothing needs
 # rebuilding; a node-gyp rebuild would also require Python + MSVC. Verify with `npm run check:native`.
 npmRebuild: false

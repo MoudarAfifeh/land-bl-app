@@ -9,3 +9,15 @@ coverage/
 test-results/
 test-output/
 playwright-report/
+
+# License keys: the private key lives outside the repo (docs/LICENSING.md); these patterns are a
+# second line of defence. Only the public keys below are committed.
+*.pem
+*.key
+*private*key*
+*private-key*
+issued-licenses.csv
+*.lic
+!src/main/license/production-public-key.pem
+!e2e/fixtures/license-test-public.pem
+!e2e/fixtures/license-test-private.pem

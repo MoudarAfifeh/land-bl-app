@@ -11,7 +11,7 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.ts'],
     environment: 'node',
     globalSetup: ['vitest.global-setup.ts'],
     // Processed by Vitest (not loaded natively) so its `electron` import gets the stub too.
