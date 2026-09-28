@@ -16,6 +16,7 @@ export default tseslint.config(
       'scripts/**/*.mjs',
       'e2e/**/*.ts',
       'e2e-packaged/**/*.ts',
+      'screenshots/**/*.ts',
       'tools/**/*.ts',
       '*.config.ts',
       '*.config.mjs'

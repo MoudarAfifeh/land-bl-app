@@ -18,7 +18,8 @@
     "license": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/license-generator/cli.ts",
     "build:win": "npm run check:native && electron-vite build && node scripts/check-license-key.mjs && node scripts/check-offline.mjs && electron-builder --win",
     "build:test-package": "electron-vite build --mode e2e && node scripts/check-offline.mjs && electron-builder --win --dir --config.directories.output=dist-e2e",
-    "test:packaged": "npm run build:test-package && playwright test -c playwright.packaged.config.ts"
+    "test:packaged": "npm run build:test-package && playwright test -c playwright.packaged.config.ts",
+    "screenshots": "npm run build:test-package && playwright test -c playwright.screenshots.config.ts"
   },
   "dependencies": {
     "@electron-toolkit/utils": "4.0.0",
