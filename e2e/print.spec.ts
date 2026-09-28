@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test'
 import type { Api } from '../src/shared/api'
 import { longDocument } from '../src/main/services/test-fixtures'
+import { installTestLicense } from './license'
 
 type WithApi = { api: Api }
 
@@ -18,6 +19,7 @@ let userData: string
 test.beforeAll(async () => {
   // A throwaway userData folder: the real database is never touched.
   userData = mkdtempSync(join(tmpdir(), 'land-bl-e2e-'))
+  installTestLicense(userData)
   app = await electron.launch({ args: ['.', `--user-data-dir=${userData}`] })
   expect(await app.evaluate(({ app }) => app.getPath('userData'))).toBe(userData)
 })

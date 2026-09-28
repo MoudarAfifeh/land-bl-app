@@ -8,6 +8,7 @@ import {
   type ElectronApplication,
   type Page
 } from '@playwright/test'
+import { installTestLicense } from './license'
 
 const ARABIC_INDIC = /[٠-٩۰-۹]/
 const monthYear = (d: Date): string =>
@@ -19,6 +20,7 @@ let page: Page
 
 test.beforeAll(async () => {
   userData = mkdtempSync(join(tmpdir(), 'land-bl-e2e-'))
+  installTestLicense(userData)
   app = await electron.launch({ args: ['.', `--user-data-dir=${userData}`] })
   page = await app.firstWindow()
   await page.evaluate(() => (location.hash = '#/new'))

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test'
 import type { Api } from '../src/shared/api'
 import { sampleDocument } from '../src/main/services/test-fixtures'
+import { installTestLicense } from './license'
 
 type WithApi = { api: Api }
 
@@ -30,6 +31,7 @@ async function answerOpenDialog(app: ElectronApplication, path: string): Promise
 
 test.beforeAll(() => {
   userData = mkdtempSync(join(tmpdir(), 'land-bl-e2e-'))
+  installTestLicense(userData)
   backupFolder = mkdtempSync(join(tmpdir(), 'land-bl-e2e-backups-'))
 })
 
