@@ -138,14 +138,14 @@ describe('issue', () => {
     issueFor({ customer: 'Office "A", Damascus', note: 'first install' })
     issueFor({ expires: '2027-01-31' })
     const log = readFileSync(join(keys, LOG_FILE), 'utf8')
-    const lines = log.replace(/^﻿/, '').trimEnd().split(/\r?\n/)
+    const lines = log.replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/)
     expect(lines).toEqual([
       'issued_at,customer_name,machine_code,expires_at,note',
       `2026-09-28,"Office ""A"", Damascus",${MACHINE.match(/.{4}/g)!.join('-')},never,first install`,
       `2026-09-28,مكتب التخليص,${MACHINE.match(/.{4}/g)!.join('-')},2027-01-31,`
     ])
     // A byte order mark, so Excel reads the Arabic names correctly.
-    expect(log.startsWith('﻿')).toBe(true)
+    expect(log.startsWith('\uFEFF')).toBe(true)
   })
 
   it('refuses a private key that does not match the app public key', () => {

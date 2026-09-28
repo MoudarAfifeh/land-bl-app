@@ -154,7 +154,7 @@ const csvCell = (value: string): string =>
 
 /** One row per license; the file starts with a BOM so Excel reads Arabic names correctly. */
 function appendLog(logPath: string, payload: LicensePayload, note: string): void {
-  if (!existsSync(logPath)) writeFileSync(logPath, `﻿${LOG_HEADER}\r\n`, 'utf8')
+  if (!existsSync(logPath)) writeFileSync(logPath, `\uFEFF${LOG_HEADER}\r\n`, 'utf8')
   const row = [
     payload.issuedAt,
     payload.customerName,
