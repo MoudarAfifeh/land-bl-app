@@ -2,6 +2,7 @@ import { createPublicKey } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'electron-vite'
+import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -28,6 +29,18 @@ function licensePublicKey(mode: string): string {
     .toString('base64')
 }
 
+/**
+ * The CSP in src/renderer/index.html refuses every connection (connect-src 'none'). The dev server's
+ * hot reload needs one to itself, so `npm run dev` only relaxes it to 'self'; builds keep it.
+ */
+function devServerCsp(): Plugin {
+  return {
+    name: 'land-bl-dev-csp',
+    apply: 'serve',
+    transformIndexHtml: (html) => html.replace("connect-src 'none'", "connect-src 'self'")
+  }
+}
+
 export default defineConfig(({ mode }) => ({
   main: {
     resolve: { alias: shared },
@@ -40,6 +53,9 @@ export default defineConfig(({ mode }) => ({
     resolve: {
       alias: { ...shared, '@': resolve('src/renderer/src') }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [react(), tailwindcss(), devServerCsp()],
+    // Minified: smaller, and library comments (docs links) don't ship. scripts/check-offline.mjs
+    // then reviews every URL string left in the bundle.
+    build: { minify: true }
   }
 }))

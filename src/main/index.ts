@@ -15,7 +15,13 @@ import { createExportService } from './services/export-dialog'
 import { createPrintService } from './services/print'
 import { captureMainErrors, createLog, LOGS_FOLDER, type Log } from './log'
 import { copyOldUserData, DATA_FOLDER, type DataCopy } from './user-data'
-import { APP_TITLE, loadRenderer, lockNavigation, secureWebPreferences } from './windows'
+import {
+  APP_TITLE,
+  blockRemoteRequests,
+  loadRenderer,
+  lockNavigation,
+  secureWebPreferences
+} from './windows'
 
 /** Matches `appId` in electron-builder.yml (taskbar grouping, pinned shortcuts). */
 const APP_USER_MODEL_ID = 'com.landbl.app'
@@ -156,6 +162,7 @@ function appHandlers(): Api['app'] {
 
 function start(): void {
   app.setAppUserModelId(APP_USER_MODEL_ID)
+  blockRemoteRequests(session.defaultSession, (url) => log.write('WARN', `Blocked request: ${url}`))
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) =>
     callback(false)
   )
